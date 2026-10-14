@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function ($scope, $window) {
+    /* ======================================================================
+     * EDP Theme Toggle — client controller
+     * ======================================================================
+     * Flips the `data-edp-theme` attribute on the document element, persists
+     * the choice to localStorage, and respects `prefers-color-scheme` on a
+     * first visit.
+     *
+     * Resolution order on first paint (the header client script performs the
+     * same resolution, so every page is correct before this control renders):
+     *     1. the stored `edp-theme` value in localStorage
+     *     2. the `prefers-color-scheme: dark` media query
+     *     3. light
+     *
+     * Until the visitor makes an explicit choice, the control keeps following
+     * the operating-system setting live.
+     *
+     * NOTE: this file must begin with the `api.controller` assignment — the
+     * SDK's client-controller validator rejects leading file-level comments
+     * for this widget, so the documentation lives inside the function body.
+     * ====================================================================== */
+    var c = this;
+
+    var THEME_KEY = 'edp-theme';
+    var THEME_ATTR = 'data-edp-theme';
+    var root = $window.document.documentElement;
+
+    c.announcement = '';
+    c.theme = 'light';
+    c.isDark = false;
+
+    // Reads the persisted preference. Returns null when the visitor has not
+    // chosen explicitly, or when storage is unavailable (private browsing).
+    function readStored() {
+        var value = null;
+        try {
+            if ($window.localStorage) {
+                value = $window.localStorage.getItem(THEME_KEY);
+            }
+        } catch (readErr) {
+            value = null;
+        }
+        if (value === 'light' || value === 'dark') {
+            return value;
+        }
+        return null;
+    }
+
+    // Persisting is best-effort: the toggle still works for this page load
+    // even if storage is blocked.
+    function writeStored(value) {
+        try {
+            if ($window.localStorage) {
+                $window.localStorage.setItem(THEME_KEY, value);
+            }
+        } catch (writeErr) {
+            c.persisted = false;
+        }
+    }
+
+    function systemPrefersDark() {
+        if (!$window.matchMedia) {
+            return false;
+        }
+        return $window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+    }
+
+    function resolveTheme() {
+        var stored = readStored();
+        if (stored) {
+            return stored;
+        }
+        if (systemPrefersDark()) {
+            return 'dark';
+        }
+        return 'light';
+    }
+
+    // The single source of truth: ONE attribute on the document element.
+    // The theme stylesheet declares the full palette under both
+    // `:root, [data-edp-theme="light"]` and `[data-edp-theme="dark"]`.
+    function applyTheme(theme) {
+        root.setAttribute(THEME_ATTR, theme);
+        c.theme = theme;
+        c.isDark = theme === 'dark';
+    }
+
+    // Respect whatever the header already resolved, otherwise resolve now.
+    var current = root.getAttribute(THEME_ATTR);
+    if (current === 'dark' || current === 'light') {
+        applyTheme(current);
+    } else {
+        applyTheme(resolveTheme());
+    }
+
+    c.toggle = function () {
+        var next = 'dark';
+        if (c.isDark) {
+            next = 'light';
+        }
+        applyTheme(next);
+        writeStored(next);
+        // Announced through the polite live region in the template.
+        if (next === 'dark') {
+            c.announcement = c.data.msg.switchedToDark;
+        } else {
+            c.announcement = c.data.msg.switchedToLight;
+        }
+    };
+
+    // Keep following the OS until the visitor chooses explicitly.
+    function onSystemChange(event) {
+        if (readStored()) {
+            return;
+        }
+        var next = 'light';
+        if (event && event.matches) {
+            next = 'dark';
+        }
+        $scope.$applyAsync(function () {
+            applyTheme(next);
+        });
+    }
+
+    var mediaQuery = null;
+    if ($window.matchMedia) {
+        mediaQuery = $window.matchMedia('(prefers-color-scheme: dark)');
+    }
+
+    if (mediaQuery && mediaQuery.addEventListener) {
+        mediaQuery.addEventListener('change', onSystemChange);
+    } else if (mediaQuery && mediaQuery.addListener) {
+        mediaQuery.addListener(onSystemChange);
+    }
+
+    // $scope is injected ONLY for the digest helper and this cleanup hook —
+    // all data access stays on the `c` controller alias.
+    $scope.$on('$destroy', function () {
+        if (mediaQuery && mediaQuery.removeEventListener) {
+            mediaQuery.removeEventListener('change', onSystemChange);
+        } else if (mediaQuery && mediaQuery.removeListener) {
+            mediaQuery.removeListener(onSystemChange);
+        }
+    });
+};
+]]></client_script>
+        <controller_as>c</controller_as>
+        <css>/* ==========================================================================
+ * EDP Theme Toggle — styles
+ * ==========================================================================
+ * A pill switch sized to sit comfortably in the glass navbar.
+ * Colours from the theme `--edp-*` runtime tokens; sizes from the $sp-* scales.
+ * Minimum 44x24 track with a 36px+ hit area, so it is comfortable on touch.
+ * ========================================================================== */
+
+.edp-theme-toggle {
+    display: inline-flex;
+    align-items: center;
+}
+
+.edp-theme-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: $sp-space-2;
+    padding: $sp-space-1 $sp-space-3 $sp-space-1 $sp-space-1;
+    border-radius: var(--edp-radius-pill);
+    border: 1px solid var(--edp-hairline-strong);
+    background-color: var(--edp-surface-sunken);
+    color: var(--edp-text-secondary);
+    min-height: 36px;
+    transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.edp-theme-switch:hover,
+.edp-theme-switch:focus {
+    background-color: var(--edp-accent-soft);
+    border-color: var(--edp-accent);
+    color: var(--edp-accent-ink);
+}
+
+/* --- track --- */
+.edp-theme-switch-track {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+    flex: 0 0 auto;
+    border-radius: var(--edp-radius-pill);
+    background-color: var(--edp-hairline-strong);
+    transition: background-color 220ms ease;
+}
+
+.edp-theme-switch[aria-checked='true'] .edp-theme-switch-track {
+    background-color: var(--edp-accent);
+}
+
+/* --- knob --- */
+.edp-theme-switch-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background-color: var(--edp-bg-elevated);
+    color: var(--edp-accent-ink);
+    font-size: $sp-icon-xs;
+    box-shadow: var(--edp-shadow-1);
+    transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.edp-theme-switch[aria-checked='true'] .edp-theme-switch-knob {
+    transform: translateX(22px);
+}
+
+/* --- text label --- */
+.edp-theme-switch-text {
+    font-size: $sp-text-xs;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+/* On narrow viewports the pill keeps the track but drops the word. */
+@media (max-width: 479px) {
+    .edp-theme-switch-text {
+        display: none;
+    }
+
+    .edp-theme-switch {
+        padding: $sp-space-1;
+    }
+}
+
+/* ---------------- FORCED COLORS -------------------------------------- */
+/* Make sure the switch state is still perceivable without our colours. */
+@media screen and (forced-colors: active) {
+    .edp-theme-switch-track {
+        border: 1px solid CanvasText;
+    }
+
+    .edp-theme-switch[aria-checked='true'] .edp-theme-switch-track {
+        background-color: Highlight;
+    }
+}
+
+/* ---------------- REDUCED MOTION (MANDATORY) ------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    .edp-theme-switch,
+    .edp-theme-switch-track,
+    .edp-theme-switch-knob {
+        transition: none;
+    }
+}
+</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description>Light/dark switch for the Enterprise Digital portal. Flips data-edp-theme on the html element, persists to localStorage and respects prefers-color-scheme on first visit.</description>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id>x_exls_enterpris_0_edp_theme_toggle</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+}]]></link>
+        <name>EDP Theme Toggle</name>
+        <option_schema>[{"name":"label","label":"Accessible label","type":"string","section":"Presentation","default_value":"Dark mode","hint":"Used as the switch aria-label. Keep it describing the control, not the state."},{"name":"light_label","label":"Light state text","type":"string","section":"Presentation","default_value":"Light"},{"name":"dark_label","label":"Dark state text","type":"string","section":"Presentation","default_value":"Dark"}]</option_schema>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[/* ==========================================================================
+ * EDP Theme Toggle — server script
+ * ==========================================================================
+ * Nothing to query — the toggle is a pure client-side preference. The server
+ * script only supplies translated strings so the control is localisable.
+ *
+ * Scoped app: gs.getMessage is scope-safe. No gs.print, no nowDateTime().
+ * ========================================================================== */
+(function () {
+    data.msg = {
+        label: options.label || gs.getMessage('Dark mode'),
+        light: options.light_label || gs.getMessage('Light'),
+        dark: options.dark_label || gs.getMessage('Dark'),
+        switchedToLight: gs.getMessage('Light mode enabled'),
+        switchedToDark: gs.getMessage('Dark mode enabled')
+    };
+})();
+]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-10-14 01:32:55</sys_created_on>
+        <sys_id>9c574f3cf15b4830be31aa3251ab1627</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>EDP Theme Toggle</sys_name>
+        <sys_package display_value="Enterprise Digital" source="x_exls_enterpris_0">0f5d34e783f743108b9b98c6feaad3ee</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Enterprise Digital">0f5d34e783f743108b9b98c6feaad3ee</sys_scope>
+        <sys_update_name>sp_widget_9c574f3cf15b4830be31aa3251ab1627</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-10-14 01:32:55</sys_updated_on>
+        <template><![CDATA[<!--
+  ==========================================================================
+  EDP Theme Toggle  (x_exls_enterpris_0_edp_theme_toggle)
+  ==========================================================================
+  Light / dark switch for the EDP Sage theme.
+
+  IMPORTANT: this is a CSS-custom-property runtime toggle, NOT an sp_theme
+  swap. `sp_theme` is per-portal, not per-user — so switching themes per
+  visitor is done by flipping ONE attribute on <html>:
+
+        <html data-edp-theme="light|dark">
+
+  The theme stylesheet declares the full palette under both
+  `:root / [data-edp-theme="light"]` and `[data-edp-theme="dark"]`.
+
+  ACCESSIBILITY: a real switch control — role="switch" + aria-checked +
+  aria-label, keyboard operable as a native <button>, with a polite live
+  region announcing the new state.
+  ==========================================================================
+-->
+<div class="edp-theme-toggle">
+  <button type="button"
+          class="edp-theme-switch edp-focusable"
+          role="switch"
+          aria-checked="{{c.isDark ? 'true' : 'false'}}"
+          aria-label="{{::c.data.msg.label}}"
+          ng-click="c.toggle()">
+    <span class="edp-theme-switch-track" aria-hidden="true">
+      <span class="edp-theme-switch-knob">
+        <i class="fa" ng-class="c.isDark ? 'fa-moon-o' : 'fa-sun-o'"></i>
+      </span>
+    </span>
+    <span class="edp-theme-switch-text" aria-hidden="true">
+      {{c.isDark ? c.data.msg.dark : c.data.msg.light}}
+    </span>
+  </button>
+
+  <!-- Announces the new mode to screen reader users after each toggle. -->
+  <span class="edp-sr-only" role="status" aria-live="polite">{{c.announcement}}</span>
+</div>
+]]></template>
+    </sp_widget>
+</record_update>

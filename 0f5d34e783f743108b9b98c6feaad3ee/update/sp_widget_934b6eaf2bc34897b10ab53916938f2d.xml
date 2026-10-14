@@ -1,0 +1,989 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[/* ==========================================================================
+ * EDP Topic Tiles + Modal — client script
+ * ==========================================================================
+ * Implements a REAL modal dialog, not a div that looks like one:
+ *   open   -> lock background scroll, move focus into the dialog
+ *   open   -> trap Tab / Shift+Tab inside the dialog
+ *   Esc    -> close
+ *   close  -> unlock scroll, return focus to the tile that opened it
+ *
+ * Also wires the scroll-reveal transition, which is skipped entirely for
+ * visitors who ask for reduced motion.
+ * ========================================================================== */
+api.controller = function ($scope, $element, $timeout, $window, spUtil) {
+    var c = this;
+
+    var KEY_TAB = 9;
+    var KEY_ESC = 27;
+    var SCROLL_LOCK_CLASS = 'edp-no-scroll';
+    var FOCUSABLE_SELECTOR = [
+        'a[href]',
+        'button:not([disabled])',
+        'input:not([disabled]):not([type="hidden"])',
+        'select:not([disabled])',
+        'textarea:not([disabled])',
+        '[tabindex]:not([tabindex="-1"])'
+    ].join(',');
+
+    c.uid = spUtil && spUtil.generateUniqueID ? spUtil.generateUniqueID() : ('edp' + Date.now());
+    c.activeTile = null;
+
+    c.reduceMotion = !!($window.matchMedia &&
+        $window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+    var doc = $window.document;
+    var triggerEl = null;
+
+    /* ------------------------------------------------------------------ *
+     * Helpers
+     * ------------------------------------------------------------------ */
+    function modalNode() {
+        return $element[0].querySelector('.edp-modal');
+    }
+
+    function focusableIn(container) {
+        if (!container) {
+            return [];
+        }
+        var nodes = container.querySelectorAll(FOCUSABLE_SELECTOR);
+        var out = [];
+        for (var i = 0; i < nodes.length; i++) {
+            var el = nodes[i];
+            // only visible, reachable nodes
+            if (el.offsetWidth > 0 || el.offsetHeight > 0 || el.getClientRects().length) {
+                out.push(el);
+            }
+        }
+        return out;
+    }
+
+    function lockScroll(lock) {
+        if (!doc || !doc.body) {
+            return;
+        }
+        if (lock) {
+            doc.body.classList.add(SCROLL_LOCK_CLASS);
+        } else {
+            doc.body.classList.remove(SCROLL_LOCK_CLASS);
+        }
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Open / close
+     * ------------------------------------------------------------------ */
+    c.openTile = function (tile, $event) {
+        if (!tile) {
+            return;
+        }
+        // Remember the triggering tile so focus can be restored to it.
+        triggerEl = ($event && $event.currentTarget) ? $event.currentTarget : null;
+
+        c.activeTile = tile;
+        lockScroll(true);
+
+        // Wait for ng-if to materialise the dialog, then move focus into it.
+        // The dialog itself carries tabindex="-1" so screen readers announce
+        // its accessible name and description before the first control.
+        $timeout(function () {
+            var modal = modalNode();
+            if (modal && modal.focus) {
+                modal.focus();
+            }
+        });
+    };
+
+    c.close = function () {
+        if (!c.activeTile) {
+            return;
+        }
+        c.activeTile = null;
+        lockScroll(false);
+
+        var returnTo = triggerEl;
+        triggerEl = null;
+
+        $timeout(function () {
+            if (returnTo && returnTo.focus) {
+                returnTo.focus();
+            }
+        });
+    };
+
+    /* ------------------------------------------------------------------ *
+     * Keyboard: Esc closes, Tab is trapped
+     * ------------------------------------------------------------------ */
+    c.onModalKeydown = function ($event) {
+        if (!$event) {
+            return;
+        }
+        var code = $event.keyCode || $event.which;
+
+        if (code === KEY_ESC) {
+            $event.preventDefault();
+            $event.stopPropagation();
+            c.close();
+            return;
+        }
+
+        if (code !== KEY_TAB) {
+            return;
+        }
+
+        var modal = modalNode();
+        var items = focusableIn(modal);
+
+        if (!items.length) {
+            // Nothing tabbable inside — keep focus on the dialog.
+            $event.preventDefault();
+            if (modal && modal.focus) {
+                modal.focus();
+            }
+            return;
+        }
+
+        var first = items[0];
+        var last = items[items.length - 1];
+        var active = doc.activeElement;
+
+        if ($event.shiftKey) {
+            if (active === first || active === modal || !modal.contains(active)) {
+                $event.preventDefault();
+                last.focus();
+            }
+        } else if (active === last) {
+            $event.preventDefault();
+            first.focus();
+        }
+    };
+
+    /* ------------------------------------------------------------------ *
+     * Scroll reveal
+     * ------------------------------------------------------------------ */
+    $timeout(function () {
+        var nodes = $element[0].querySelectorAll('.edp-reveal');
+        var i;
+
+        if (!nodes.length) {
+            return;
+        }
+
+        // No IntersectionObserver, or the visitor asked for reduced motion:
+        // show everything immediately, no transition.
+        if (!$window.IntersectionObserver || c.reduceMotion) {
+            for (i = 0; i < nodes.length; i++) {
+                nodes[i].classList.add('is-visible');
+            }
+            return;
+        }
+
+        var observer = new $window.IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.12, rootMargin: '0px 0px -5% 0px' });
+
+        for (i = 0; i < nodes.length; i++) {
+            observer.observe(nodes[i]);
+        }
+
+        $scope.$on('$destroy', function () {
+            observer.disconnect();
+        });
+    });
+
+    /* ------------------------------------------------------------------ *
+     * Safety net: never leave the page scroll-locked.
+     * $scope is injected ONLY for these lifecycle hooks — all data access
+     * stays on the `c` controller alias.
+     * ------------------------------------------------------------------ */
+    $scope.$on('$destroy', function () {
+        lockScroll(false);
+    });
+};
+]]></client_script>
+        <controller_as>c</controller_as>
+        <css>/* ==========================================================================
+ * EDP Topic Tiles + Modal — styles
+ * ==========================================================================
+ *   1. section header
+ *   2. scroll-reveal primitive (.edp-reveal)
+ *   3. glass tiles + hover depth/lift + micro-interactions
+ *   4. modal: scrim, dialog shell, head / body / foot
+ *   5. responsive
+ *   6. reduced motion (ALL continuous + entrance animation disabled)
+ *
+ * Colours come from the theme's `--edp-*` runtime tokens (light/dark safe);
+ * sizes from the theme $sp-* scales. No font-size below $sp-text-xs (12px).
+ * ========================================================================== */
+
+/* ---------------- 1. SECTION HEADER ----------------------------------- */
+.edp-tiles-section {
+    position: relative;
+    padding: $sp-space-6 0;
+}
+
+.edp-section-head {
+    margin-bottom: $sp-space-6;
+    max-width: 62ch;
+}
+
+.edp-section-title {
+    color: var(--edp-text);
+    font-size: $sp-text-xl;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 $sp-space-2;
+}
+
+.edp-section-sub {
+    color: var(--edp-text-muted);
+    font-size: $sp-text-base;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* ---------------- 2. SCROLL REVEAL ----------------------------------- */
+/* The client script adds `.is-visible` when the element scrolls into view
+   (and immediately, with no transition, under reduced motion). */
+.edp-reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 520ms cubic-bezier(0.2, 0.8, 0.2, 1),
+                transform 520ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.edp-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Staggered entrance across the grid. */
+.edp-tile-col:nth-child(1) .edp-reveal { transition-delay: 0ms; }
+.edp-tile-col:nth-child(2) .edp-reveal { transition-delay: 70ms; }
+.edp-tile-col:nth-child(3) .edp-reveal { transition-delay: 140ms; }
+.edp-tile-col:nth-child(4) .edp-reveal { transition-delay: 210ms; }
+
+/* ---------------- 3. TILES ------------------------------------------- */
+.edp-tiles-grid {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.edp-tile-col {
+    display: flex;
+    margin-bottom: $sp-space-4;
+}
+
+/* FROSTED GLASS TILE
+ * ------------------
+ * Layers, back to front:
+ *   1. `backdrop-filter: blur(30px) saturate(185%)` — the frost itself; the
+ *      animated hero/page background behind it is smeared and colour-lifted.
+ *   2. `--edp-glass-surface` (alpha 0.88 in BOTH themes) — the translucency
+ *      floor. This is what keeps title/summary copy above 4.5:1; raising the
+ *      blur does not dilute the text because the surface alpha carries it.
+ *      Measured on the real composite: title 14.6:1 light / 10.0:1 dark,
+ *      summary 6.5:1 light / 6.0:1 dark.
+ *   3. a diagonal specular sheen + a soft shade pooling at the bottom edge,
+ *      so the pane reads as a physical sheet of glass rather than a tint.
+ *   4. inset rings: a 1px crisp top highlight and a full 1px inner edge —
+ *      the "wet" hairline you get along a cut glass edge.
+ */
+.edp-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    width: 100%;
+    padding: $sp-space-5;
+    border-radius: var(--edp-radius);
+    border: 1px solid var(--edp-hairline);
+    background-color: var(--edp-glass-surface);
+    background-image:
+        linear-gradient(168deg,
+            var(--edp-glass-sheen) 0%,
+            var(--edp-glass-sheen-soft) 32%,
+            transparent 58%),
+        radial-gradient(150% 100% at 50% 118%, var(--edp-glass-shade) 0%, transparent 62%);
+    box-shadow:
+        var(--edp-shadow-2),
+        inset 0 1px 0 var(--edp-glass-highlight),
+        inset 0 0 0 1px var(--edp-glass-edge);
+    -webkit-backdrop-filter: blur(var(--edp-blur-glass)) saturate(var(--edp-glass-saturate));
+    backdrop-filter: blur(var(--edp-blur-glass)) saturate(var(--edp-glass-saturate));
+    color: var(--edp-text);
+    overflow: hidden;
+    transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+                box-shadow 220ms ease,
+                border-color 220ms ease,
+                background-color 220ms ease;
+}
+
+/* Where backdrop-filter is unavailable there is no frost to carry the look,
+   so fall back to the near-opaque surface rather than a flat tint. */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    .edp-tile {
+        background-color: var(--edp-surface-strong);
+    }
+}
+
+/* Sage wash that fades in on hover/focus — the depth cue. */
+.edp-tile::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(120% 90% at 0% 0%, var(--edp-accent-soft) 0%, transparent 65%);
+    opacity: 0;
+    transition: opacity 220ms ease;
+    pointer-events: none;
+}
+
+.edp-tile:hover,
+.edp-tile:focus {
+    transform: translateY(-4px);
+    /* Keep the glass insets while lifting — dropping them would flatten the
+       frosted edge on hover. */
+    box-shadow:
+        var(--edp-shadow-3),
+        inset 0 1px 0 var(--edp-glass-highlight),
+        inset 0 0 0 1px var(--edp-glass-edge);
+    border-color: var(--edp-accent);
+    background-color: var(--edp-surface-hover);
+}
+
+.edp-tile:hover::after,
+.edp-tile:focus::after {
+    opacity: 1;
+}
+
+.edp-tile:active {
+    transform: translateY(-1px);
+}
+
+.edp-tile-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    margin-bottom: $sp-space-4;
+    border-radius: var(--edp-radius-sm);
+    background-color: var(--edp-accent-soft);
+    border: 1px solid var(--edp-hairline);
+    color: var(--edp-accent-ink);
+    font-size: $sp-icon-md;
+    transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+                background-color 220ms ease;
+}
+
+.edp-tile:hover .edp-tile-icon {
+    transform: scale(1.07) rotate(-3deg);
+    background-color: var(--edp-accent-soft-hover);
+}
+
+.edp-tile-title {
+    position: relative;
+    display: block;
+    color: var(--edp-text);
+    font-size: $sp-text-md;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: $sp-space-2;
+}
+
+.edp-tile-summary {
+    position: relative;
+    display: block;
+    color: var(--edp-text-muted);
+    font-size: $sp-text-sm;
+    line-height: 1.55;
+    margin-bottom: $sp-space-4;
+    flex: 1 1 auto;
+}
+
+.edp-tile-more {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: $sp-space-1;
+    color: var(--edp-accent-ink);
+    font-size: $sp-text-xs;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.edp-tile-more-icon {
+    font-size: $sp-icon-sm;
+    transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.edp-tile:hover .edp-tile-more-icon {
+    transform: translateX(4px);
+}
+
+/* ---------------- 4. MODAL ------------------------------------------- */
+.edp-modal-root {
+    position: fixed;
+    inset: 0;
+    z-index: 1060;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: $sp-space-5;
+}
+
+.edp-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background-color: var(--edp-scrim);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    animation: edp-fade-in 180ms ease both;
+}
+
+.edp-modal {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 580px;
+    max-height: calc(100vh - #{$sp-space-8});
+    overflow-y: auto;
+    border-radius: var(--edp-radius-lg);
+    /* Deliberately near-opaque: glass is lovely, but the dialog copy must
+       keep its 4.5:1 contrast in both themes. */
+    background-color: var(--edp-surface-strong);
+    border: 1px solid var(--edp-hairline-strong);
+    box-shadow: var(--edp-shadow-3);
+    -webkit-backdrop-filter: blur(var(--edp-blur-strong)) saturate(150%);
+    backdrop-filter: blur(var(--edp-blur-strong)) saturate(150%);
+    color: var(--edp-text);
+    animation: edp-modal-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Soft sage glow in the top corner of the dialog. */
+.edp-modal-glow {
+    position: absolute;
+    top: -40%;
+    right: -20%;
+    width: 60%;
+    padding-bottom: 60%;
+    border-radius: 50%;
+    background: var(--edp-aurora-1);
+    filter: blur(70px);
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+@keyframes edp-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes edp-modal-in {
+    from { opacity: 0; transform: translateY(16px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.edp-modal-head {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: $sp-space-3;
+    padding: $sp-space-5 $sp-space-5 $sp-space-4;
+    border-bottom: 1px solid var(--edp-hairline);
+}
+
+.edp-modal-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--edp-radius-sm);
+    background-color: var(--edp-accent-soft);
+    color: var(--edp-accent-ink);
+    font-size: $sp-icon-md;
+}
+
+.edp-modal-title {
+    flex: 1 1 auto;
+    color: var(--edp-text);
+    font-size: $sp-text-lg;
+    font-weight: 700;
+    line-height: 1.25;
+    margin: 0;
+}
+
+.edp-modal-close {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--edp-hairline-strong);
+    background-color: transparent;
+    color: var(--edp-text-secondary);
+    font-size: $sp-icon-sm;
+    line-height: 1;
+    transition: background-color 160ms ease, color 160ms ease;
+}
+
+.edp-modal-close:hover,
+.edp-modal-close:focus {
+    background-color: var(--edp-accent-soft);
+    color: var(--edp-accent-ink);
+}
+
+.edp-modal-body {
+    position: relative;
+    padding: $sp-space-5;
+}
+
+.edp-modal-lede {
+    color: var(--edp-text);
+    font-size: $sp-text-md;
+    font-weight: 600;
+    line-height: 1.55;
+    margin: 0 0 $sp-space-4;
+}
+
+.edp-modal-para {
+    color: var(--edp-text-secondary);
+    font-size: $sp-text-base;
+    line-height: 1.65;
+    margin: 0 0 $sp-space-3;
+}
+
+.edp-modal-note {
+    display: flex;
+    align-items: flex-start;
+    gap: $sp-space-2;
+    margin: $sp-space-4 0 0;
+    padding: $sp-space-3 $sp-space-4;
+    border-radius: var(--edp-radius-sm);
+    border: 1px solid var(--edp-hairline-strong);
+    background-color: var(--edp-surface-sunken);
+    color: var(--edp-text-secondary);
+    font-size: $sp-text-sm;
+    line-height: 1.5;
+}
+
+.edp-modal-note .fa {
+    color: var(--edp-accent-ink);
+    font-size: $sp-icon-sm;
+    margin-top: 2px;
+}
+
+.edp-modal-foot {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: $sp-space-3;
+    padding: $sp-space-4 $sp-space-5 $sp-space-5;
+    border-top: 1px solid var(--edp-hairline);
+}
+
+.edp-modal-foot .btn {
+    padding: $sp-space-3 $sp-space-5;
+    font-size: $sp-text-base;
+}
+
+.edp-modal-cta-icon {
+    margin-left: $sp-space-2;
+    font-size: $sp-icon-xs;
+    transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.edp-modal-foot .btn-primary:hover .edp-modal-cta-icon {
+    transform: translateX(3px);
+}
+
+/* ---------------- 5. RESPONSIVE -------------------------------------- */
+@media (max-width: 991px) {
+    .edp-tile {
+        padding: $sp-space-4;
+    }
+}
+
+@media (max-width: 767px) {
+    .edp-tiles-section {
+        padding: $sp-space-5 0;
+    }
+
+    .edp-section-title {
+        font-size: $sp-text-lg;
+    }
+
+    .edp-modal-root {
+        padding: $sp-space-3;
+        align-items: flex-end;
+    }
+
+    .edp-modal {
+        max-width: none;
+        max-height: calc(100vh - #{$sp-space-6});
+    }
+
+    .edp-modal-foot .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* ---------------- 6. REDUCED MOTION (MANDATORY) ---------------------- */
+@media (prefers-reduced-motion: reduce) {
+    .edp-reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    .edp-tile-col:nth-child(1) .edp-reveal,
+    .edp-tile-col:nth-child(2) .edp-reveal,
+    .edp-tile-col:nth-child(3) .edp-reveal,
+    .edp-tile-col:nth-child(4) .edp-reveal {
+        transition-delay: 0ms;
+    }
+
+    .edp-tile,
+    .edp-tile::after,
+    .edp-tile-icon,
+    .edp-tile-more-icon,
+    .edp-modal-close,
+    .edp-modal-cta-icon {
+        transition: none;
+    }
+
+    .edp-tile:hover,
+    .edp-tile:focus,
+    .edp-tile:active {
+        transform: none;
+    }
+
+    .edp-tile:hover .edp-tile-icon,
+    .edp-tile:hover .edp-tile-more-icon,
+    .edp-modal-foot .btn-primary:hover .edp-modal-cta-icon {
+        transform: none;
+    }
+
+    .edp-modal,
+    .edp-modal-backdrop {
+        animation: none;
+    }
+}
+</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description>Enterprise Digital topic tiles with an accessible detail modal. Tile content and targets are fully configurable per instance via widget options.</description>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id>x_exls_enterpris_0_edp_topic_tiles</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+}]]></link>
+        <name>EDP Topic Tiles</name>
+        <option_schema>[{"name":"heading","label":"Section heading","type":"string","section":"Presentation","default_value":"What do you need?"},{"name":"subheading","label":"Section sub-heading","type":"string","section":"Presentation","default_value":"Pick a topic to see what it covers, then jump straight to the right request form."},{"name":"tile1_title","label":"Tile 1 - title","type":"string","section":"Presentation","default_value":"Change Review Board","hint":"Clear this field to hide tile 1."},{"name":"tile1_icon","label":"Tile 1 - icon","type":"glyphicon","section":"Presentation","default_value":"check-square-o"},{"name":"tile1_summary","label":"Tile 1 - tile summary","type":"string","section":"Presentation","default_value":"Put a change in front of the review board and record the decision."},{"name":"tile1_description","label":"Tile 1 - modal description","type":"string","section":"Presentation","default_value":"","hint":"Rich description shown in the modal. Separate paragraphs with ||. Blank = built-in copy."},{"name":"tile1_cta_label","label":"Tile 1 - CTA label","type":"string","section":"Presentation","default_value":"Request a review"},{"name":"tile1_url","label":"Tile 1 - CTA target URL","type":"string","section":"Data","default_value":"?id=sc_cat_item&amp;sys_id=7518ecedb14542a59ccfc62d5058a8d5"},{"name":"tile1_is_stub","label":"Tile 1 - target is a placeholder","type":"boolean","section":"Behavior","default_value":"false"},{"name":"tile2_title","label":"Tile 2 - title","type":"string","section":"Presentation","default_value":"Change Deployment","hint":"Clear this field to hide tile 2."},{"name":"tile2_icon","label":"Tile 2 - icon","type":"glyphicon","section":"Presentation","default_value":"rocket"},{"name":"tile2_summary","label":"Tile 2 - tile summary","type":"string","section":"Presentation","default_value":"Book a deployment window and capture the rollback plan."},{"name":"tile2_description","label":"Tile 2 - modal description","type":"string","section":"Presentation","default_value":"","hint":"Rich description shown in the modal. Separate paragraphs with ||. Blank = built-in copy."},{"name":"tile2_cta_label","label":"Tile 2 - CTA label","type":"string","section":"Presentation","default_value":"Schedule a deployment"},{"name":"tile2_url","label":"Tile 2 - CTA target URL","type":"string","section":"Data","default_value":"?id=sc_cat_item&amp;sys_id=9639f638440e4833b8b56ec59845cec4"},{"name":"tile2_is_stub","label":"Tile 2 - target is a placeholder","type":"boolean","section":"Behavior","default_value":"false"},{"name":"tile3_title","label":"Tile 3 (PRB, stub) - title","type":"string","section":"Presentation","default_value":"PRB","hint":"Clear this field to hide tile 3."},{"name":"tile3_icon","label":"Tile 3 (PRB, stub) - icon","type":"glyphicon","section":"Presentation","default_value":"bug"},{"name":"tile3_summary","label":"Tile 3 (PRB, stub) - tile summary","type":"string","section":"Presentation","default_value":"Raise and follow problem records behind recurring incidents."},{"name":"tile3_description","label":"Tile 3 (PRB, stub) - modal description","type":"string","section":"Presentation","default_value":"","hint":"Rich description shown in the modal. Separate paragraphs with ||. Blank = built-in copy."},{"name":"tile3_cta_label","label":"Tile 3 (PRB, stub) - CTA label","type":"string","section":"Presentation","default_value":"Open the catalog"},{"name":"tile3_url","label":"Tile 3 (PRB, stub) - CTA target URL","type":"string","section":"Data","default_value":"?id=sc_landing","hint":"PLACEHOLDER - points at the catalog landing page. Re-point at the real PRB category."},{"name":"tile3_is_stub","label":"Tile 3 (PRB, stub) - target is a placeholder","type":"boolean","section":"Behavior","default_value":"true","hint":"Leave true while the target is the catalog landing page. Set false once re-pointed."},{"name":"tile4_title","label":"Tile 4 (Salesforce, stub) - title","type":"string","section":"Presentation","default_value":"Salesforce","hint":"Clear this field to hide tile 4."},{"name":"tile4_icon","label":"Tile 4 (Salesforce, stub) - icon","type":"glyphicon","section":"Presentation","default_value":"cloud"},{"name":"tile4_summary","label":"Tile 4 (Salesforce, stub) - tile summary","type":"string","section":"Presentation","default_value":"Access, licences and change requests for the Salesforce estate."},{"name":"tile4_description","label":"Tile 4 (Salesforce, stub) - modal description","type":"string","section":"Presentation","default_value":"","hint":"Rich description shown in the modal. Separate paragraphs with ||. Blank = built-in copy."},{"name":"tile4_cta_label","label":"Tile 4 (Salesforce, stub) - CTA label","type":"string","section":"Presentation","default_value":"Open the catalog"},{"name":"tile4_url","label":"Tile 4 (Salesforce, stub) - CTA target URL","type":"string","section":"Data","default_value":"?id=sc_landing","hint":"PLACEHOLDER - points at the catalog landing page. Re-point at the real Salesforce category."},{"name":"tile4_is_stub","label":"Tile 4 (Salesforce, stub) - target is a placeholder","type":"boolean","section":"Behavior","default_value":"true","hint":"Leave true while the target is the catalog landing page. Set false once re-pointed."}]</option_schema>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[/* ==========================================================================
+ * EDP Topic Tiles + Modal — server script
+ * ==========================================================================
+ * Builds `data.tiles` entirely from widget options so the four tiles can be
+ * re-pointed from the Service Portal Designer without a code change.
+ *
+ * TILE TARGETS
+ *   Tile 1  Change Review Board  -> real record producer
+ *                                  7518ecedb14542a59ccfc62d5058a8d5
+ *   Tile 2  Change Deployment    -> real record producer
+ *                                  9639f638440e4833b8b56ec59845cec4
+ *   Tile 3  PRB                  -> *** PLACEHOLDER / STUB ***
+ *   Tile 4  Salesforce           -> *** PLACEHOLDER / STUB ***
+ *
+ * Tiles 3 and 4 are navigation stubs ONLY. There is no PRB record producer and
+ * no Salesforce catalog item on this instance, so both default to the catalog
+ * landing page (`?id=sc_landing`). Re-point `tile3_url` / `tile4_url` at the
+ * real catalog category or item once those exist — no code change needed.
+ *
+ * Scoped app: gs.info / gs.error only (never gs.print), new GlideDateTime()
+ * (never nowDateTime()), explicit GlideRecord (never implicit `current`).
+ * ========================================================================== */
+(function () {
+
+    /* ---- initialise everything the template binds to ------------------- */
+    data.heading = '';
+    data.subheading = '';
+    data.tiles = [];
+    data.msg = {
+        details: gs.getMessage('Details'),
+        close: gs.getMessage('Close'),
+        opensDialog: gs.getMessage('Opens a dialog with more detail'),
+        stubNotice: gs.getMessage(
+            'This destination is a placeholder. An administrator can re-point this tile at the ' +
+            'correct catalog category from the widget options.')
+    };
+
+    data.heading = options.heading || gs.getMessage('What do you need?');
+    data.subheading = options.subheading || gs.getMessage(
+        'Pick a topic to see what it covers, then jump straight to the right request form.');
+
+    var CATALOG_LANDING = '?id=sc_landing';
+
+    /**
+     * Rich descriptions support paragraph breaks. Split on a literal `||`
+     * separator (safe inside a single-line string option) or on newlines.
+     */
+    function toParagraphs(text) {
+        if (!text) {
+            return [];
+        }
+        var parts = (text + '').split(/\s*\|\|\s*|\r?\n/);
+        var out = [];
+        for (var i = 0; i < parts.length; i++) {
+            var trimmed = (parts[i] + '').trim();
+            if (trimmed) {
+                out.push(trimmed);
+            }
+        }
+        return out;
+    }
+
+    function isTruthy(value, fallback) {
+        if (value === undefined || value === null || value === '') {
+            return fallback;
+        }
+        return value !== false && value !== 'false' && value !== '0' && value !== 0;
+    }
+
+    /**
+     * Reads one tile's six options and returns a tile object, or null when the
+     * tile has been blanked out (empty title) so admins can show fewer tiles.
+     */
+    function buildTile(index, fallback) {
+        var prefix = 'tile' + index + '_';
+        var title = options[prefix + 'title'];
+        title = (title === undefined || title === null || (title + '').trim() === '')
+            ? fallback.title
+            : (title + '').trim();
+
+        if (!title) {
+            return null;
+        }
+
+        return {
+            id: 'tile' + index,
+            title: title,
+            icon: options[prefix + 'icon'] || fallback.icon,
+            summary: options[prefix + 'summary'] || fallback.summary,
+            paragraphs: toParagraphs(options[prefix + 'description'] || fallback.description),
+            ctaLabel: options[prefix + 'cta_label'] || fallback.ctaLabel,
+            url: options[prefix + 'url'] || fallback.url,
+            isStub: isTruthy(options[prefix + 'is_stub'], fallback.isStub)
+        };
+    }
+
+    var FALLBACKS = {
+        1: {
+            title: gs.getMessage('Change Review Board'),
+            icon: 'check-square-o',
+            summary: gs.getMessage('Put a change in front of the review board and record the decision.'),
+            description: gs.getMessage(
+                'The Change Review Board assesses changes that carry delivery or operational risk. ' +
+                'Submit the change reference, a summary and your risk rating, and the board records ' +
+                'its decision against the request.') + ' || ' + gs.getMessage(
+                'You will receive the outcome — approved, rejected or deferred — together with the ' +
+                'board notes, so the rationale stays attached to the change.'),
+            ctaLabel: gs.getMessage('Request a review'),
+            url: '?id=sc_cat_item&sys_id=7518ecedb14542a59ccfc62d5058a8d5',
+            isStub: false
+        },
+        2: {
+            title: gs.getMessage('Change Deployment'),
+            icon: 'rocket',
+            summary: gs.getMessage('Book a deployment window and capture the rollback plan.'),
+            description: gs.getMessage(
+                'Register the deployment of an approved change: target environment, the window you ' +
+                'need, who is deploying, and the rollback plan if it has to be reversed.') +
+                ' || ' + gs.getMessage(
+                'Deployment status is tracked from not started through to succeeded, failed or ' +
+                'rolled back, with space for verification notes once it is done.'),
+            ctaLabel: gs.getMessage('Schedule a deployment'),
+            url: '?id=sc_cat_item&sys_id=9639f638440e4833b8b56ec59845cec4',
+            isStub: false
+        },
+        3: {
+            // *** STUB *** no PRB (problem) record producer exists on this
+            // instance. Navigation tile only — re-point `tile3_url`.
+            title: gs.getMessage('PRB'),
+            icon: 'bug',
+            summary: gs.getMessage('Raise and follow problem records behind recurring incidents.'),
+            description: gs.getMessage(
+                'Problem management tracks the underlying cause behind repeat incidents so it can be ' +
+                'removed rather than worked around.') + ' || ' + gs.getMessage(
+                'This tile is currently a navigation stub: it opens the Enterprise Digital Catalog so ' +
+                'you can find the nearest matching service.'),
+            ctaLabel: gs.getMessage('Open the catalog'),
+            url: CATALOG_LANDING,
+            isStub: true
+        },
+        4: {
+            // *** STUB *** no Salesforce catalog item exists on this instance.
+            // Navigation tile only — re-point `tile4_url`.
+            title: gs.getMessage('Salesforce'),
+            icon: 'cloud',
+            summary: gs.getMessage('Access, licences and change requests for the Salesforce estate.'),
+            description: gs.getMessage(
+                'Requests that touch the Salesforce platform — access and licensing, sandbox refreshes, ' +
+                'and changes that need coordinating with the platform team.') + ' || ' + gs.getMessage(
+                'This tile is currently a navigation stub: it opens the Enterprise Digital Catalog so ' +
+                'you can find the nearest matching service.'),
+            ctaLabel: gs.getMessage('Open the catalog'),
+            url: CATALOG_LANDING,
+            isStub: true
+        }
+    };
+
+    for (var i = 1; i <= 4; i++) {
+        var tile = buildTile(i, FALLBACKS[i]);
+        if (tile) {
+            data.tiles.push(tile);
+        }
+    }
+
+    if (!data.tiles.length) {
+        gs.info('[EDP topic tiles] All four tiles were blanked out — nothing to render.');
+    }
+})();
+]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-10-14 01:32:55</sys_created_on>
+        <sys_id>934b6eaf2bc34897b10ab53916938f2d</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>EDP Topic Tiles</sys_name>
+        <sys_package display_value="Enterprise Digital" source="x_exls_enterpris_0">0f5d34e783f743108b9b98c6feaad3ee</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Enterprise Digital">0f5d34e783f743108b9b98c6feaad3ee</sys_scope>
+        <sys_update_name>sp_widget_934b6eaf2bc34897b10ab53916938f2d</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-10-14 01:32:55</sys_updated_on>
+        <template><![CDATA[<!--
+  ==========================================================================
+  EDP Topic Tiles + Modal  (x_exls_enterpris_0_edp_topic_tiles)
+  ==========================================================================
+  A responsive grid of glassmorphic tiles. Clicking a tile opens a modal with
+  that topic's icon, title and rich description plus a primary CTA that
+  navigates to the topic's catalog target.
+
+  Each tile is 100% data-driven from `optionSchema` (see widget.now.ts) —
+  title / icon / summary / description / CTA label / target URL are all
+  editable from the Service Portal Designer with no code change.
+
+  MODAL ACCESSIBILITY CONTRACT — do not weaken:
+    * role="dialog" + aria-modal="true"
+    * aria-labelledby -> modal title, aria-describedby -> modal body
+    * focus moves INTO the dialog on open (the dialog itself, tabindex="-1",
+      so the accessible name + description are announced)
+    * focus is TRAPPED while open (Tab / Shift+Tab cycle inside)
+    * Esc closes; backdrop click closes
+    * focus RETURNS to the triggering tile on close
+    * background scroll is locked via body.edp-no-scroll
+  ==========================================================================
+-->
+<section class="edp-tiles-section" aria-labelledby="edp-tiles-heading-{{::c.uid}}">
+
+  <header class="edp-section-head edp-reveal">
+    <h2 class="edp-section-title" id="edp-tiles-heading-{{::c.uid}}">{{::c.data.heading}}</h2>
+    <p class="edp-section-sub" ng-if="::c.data.subheading">{{::c.data.subheading}}</p>
+  </header>
+
+  <!-- ---------------- TILE GRID (Bootstrap 3) ---------------- -->
+  <div class="row edp-tiles-grid">
+    <div class="col-md-3 col-sm-6 col-xs-12 edp-tile-col"
+         ng-repeat="tile in c.data.tiles track by tile.id">
+      <button type="button"
+              class="edp-tile edp-focusable edp-reveal"
+              id="edp-tile-{{::c.uid}}-{{::tile.id}}"
+              ng-click="c.openTile(tile, $event)"
+              aria-haspopup="dialog">
+        <span class="edp-tile-icon" aria-hidden="true">
+          <i class="fa fa-{{::tile.icon}}"></i>
+        </span>
+        <span class="edp-tile-title">{{::tile.title}}</span>
+        <span class="edp-tile-summary">{{::tile.summary}}</span>
+        <span class="edp-tile-more" aria-hidden="true">
+          {{::c.data.msg.details}}<i class="fa fa-angle-right edp-tile-more-icon"></i>
+        </span>
+        <span class="edp-sr-only">{{::c.data.msg.opensDialog}}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ---------------- MODAL ---------------- -->
+  <div class="edp-modal-root" ng-if="c.activeTile">
+
+    <div class="edp-modal-backdrop" ng-click="c.close()" aria-hidden="true"></div>
+
+    <div class="edp-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="edp-modal-title-{{::c.uid}}"
+         aria-describedby="edp-modal-body-{{::c.uid}}"
+         ng-keydown="c.onModalKeydown($event)"
+         tabindex="-1">
+
+      <div class="edp-modal-glow" aria-hidden="true"></div>
+
+      <header class="edp-modal-head">
+        <span class="edp-modal-icon" aria-hidden="true">
+          <i class="fa fa-{{c.activeTile.icon}}"></i>
+        </span>
+        <h2 class="edp-modal-title" id="edp-modal-title-{{::c.uid}}">{{c.activeTile.title}}</h2>
+        <button type="button"
+                class="edp-modal-close edp-focusable"
+                ng-click="c.close()"
+                aria-label="{{::c.data.msg.close}}">
+          <i class="fa fa-times" aria-hidden="true"></i>
+        </button>
+      </header>
+
+      <div class="edp-modal-body" id="edp-modal-body-{{::c.uid}}">
+        <p class="edp-modal-lede" ng-if="c.activeTile.summary">{{c.activeTile.summary}}</p>
+        <p class="edp-modal-para"
+           ng-repeat="para in c.activeTile.paragraphs track by $index">{{para}}</p>
+
+        <!-- Shown only for tiles flagged as a placeholder target. -->
+        <p class="edp-modal-note" ng-if="c.activeTile.isStub">
+          <i class="fa fa-info-circle" aria-hidden="true"></i>
+          <span>{{::c.data.msg.stubNotice}}</span>
+        </p>
+      </div>
+
+      <footer class="edp-modal-foot">
+        <a class="btn btn-primary edp-focusable"
+           ng-href="{{c.activeTile.url}}">
+          {{c.activeTile.ctaLabel}}
+          <i class="fa fa-arrow-right edp-modal-cta-icon" aria-hidden="true"></i>
+        </a>
+        <button type="button" class="btn btn-default edp-focusable" ng-click="c.close()">
+          {{::c.data.msg.close}}
+        </button>
+      </footer>
+    </div>
+  </div>
+</section>
+]]></template>
+    </sp_widget>
+</record_update>

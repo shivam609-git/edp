@@ -1,0 +1,789 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_theme">
+    <sp_theme action="INSERT_OR_UPDATE">
+        <css_variables>/* ==========================================================================
+ * Enterprise Digital Portal — "EDP Sage" theme
+ * ==========================================================================
+ * Palette: muted, slightly grey-green SAGE accent + WARM neutrals (stone,
+ * greige, warm off-white). The sage is reserved for accents, CTAs and focus
+ * states; the warm neutrals carry every surface.
+ *
+ * STRUCTURE OF THIS FILE
+ *   1. Service Portal / Bootstrap 3 SCSS variables  (structural starting
+ *      point = OOTB Coral theme, re-pointed at the sage palette)
+ *   2. Scale variables ($sp-space-*, $sp-text-*, $sp-icon-*) consumed by
+ *      every widget / header / footer stylesheet in this app
+ *   3. Runtime design tokens, declared TWICE:
+ *        :root, [data-edp-theme="light"]  -&gt; light palette
+ *        [data-edp-theme="dark"]          -&gt; dark palette
+ *      Flipping the single `data-edp-theme` attribute on &lt;html&gt; re-themes the
+ *      whole portal. The Theme Toggle widget does exactly that.
+ *   4. Global surface / focus / motion rules
+ *   5. Catalog ordering experience theming (OOTB sc_cat_item page)
+ *
+ * WHY TWO TOKEN SYSTEMS?
+ *   --edp-*   : plain hex custom properties. ALL of this app's own CSS uses
+ *               these, so the sage look and the runtime toggle are guaranteed.
+ *   --now-*   : the UXF tokens that `sp-rgb()` resolves against. They are
+ *               re-declared here (as "r, g, b" triplets, which is the format
+ *               sp-rgb() expects) so the OOTB Bootstrap layer and OOTB widgets
+ *               follow the same palette and flip with the same attribute.
+ * ========================================================================== */
+
+
+/* --------------------------------------------------------------------------
+ * 1. SERVICE PORTAL / BOOTSTRAP 3 SCSS VARIABLES
+ * Every variable ends with !default so downstream CSS can override.
+ * All colours go through sp-rgb(&lt;uxf-token&gt;, &lt;sage fallback&gt;) — never raw hex.
+ * -------------------------------------------------------------------------- */
+
+// --- Warm neutral greys ---------------------------------------------------
+$gray-base: #000000;
+$gray-darker: sp-rgb(--now-color_text--primary, #1B1816) !default;
+$gray-dark: sp-rgb(--now-color_text--primary, #2A2622) !default;
+$gray: sp-rgb(--now-color_text--secondary, #443E39) !default;
+$gray-light: sp-rgb(--now-color_text--tertiary, #635A52) !default;
+$gray-lighter: sp-rgb(--now-color_background--secondary, #F7F3EF) !default;
+
+// --- Brand ----------------------------------------------------------------
+$brand-primary: sp-rgb(--now-color--primary-1, #6E8B6B) !default;
+$brand-primary-light: sp-rgb(--now-color--interactive-1, #AEC2A7) !default;
+$brand-primary-lighter: sp-rgb(--now-color--primary-0, #E4EBDF) !default;
+$brand-primary-lightest: sp-rgb(--now-color--primary-0, #E4EBDF) !default;
+$brand-primary-dark: sp-rgb(--now-color--primary-2, #4C6349) !default;
+$brand-primary-darker: sp-rgb(--now-color--primary-3, #3A4C38) !default;
+$primary: $brand-primary !default;
+
+$brand-success: sp-rgb(--now-color_alert--positive-3, #2F6B4F) !default;
+$brand-warning: sp-rgb(--now-color_alert--warning-3, #9A7418) !default;
+$brand-danger: sp-rgb(--now-color_alert--critical-3, #B33A3A) !default;
+$brand-info: sp-rgb(--now-color_alert--info-3, #2F6D8C) !default;
+$success: $brand-success !default;
+$warning: $brand-warning !default;
+$danger: $brand-danger !default;
+$info: $brand-info !default;
+
+// --- Surfaces -------------------------------------------------------------
+$background-primary: sp-rgb(--now-color_background--primary, #FFFCFA) !default;
+$background-secondary: sp-rgb(--now-color_background--secondary, #F7F3EF) !default;
+$background-tertiary: sp-rgb(--now-color_background--tertiary, #E2DAD2) !default;
+$body-bg: $background-secondary !default;
+$body-bg-tertiary: $background-tertiary !default;
+$panel-bg: $background-primary !default;
+$sp-page-bg: $background-secondary !default;
+$sp-homepage-bg: $background-secondary !default;
+$well-bg: $background-tertiary !default;
+$component-active-bg: $background-secondary !default;
+$table-bg: transparent !default;
+$table-bg-accent: $background-secondary !default;
+$table-bg-hover: $background-tertiary !default;
+
+// --- Text -----------------------------------------------------------------
+$text-primary: sp-rgb(--now-color_text--primary, #2A2622) !default;
+$text-secondary: sp-rgb(--now-color_text--secondary, #443E39) !default;
+$text-tertiary: sp-rgb(--now-color_text--tertiary, #635A52) !default;
+$text-color: $text-primary !default;
+$text-muted: $text-tertiary !default;
+$input-color: $text-primary !default;
+$sp-tagline-color: $text-primary !default;
+$default-icon: $text-primary !default;
+$primary-icon: $brand-primary-dark !default;
+
+// --- Links ----------------------------------------------------------------
+$link-color: sp-rgb(--now-color--link-2, #4C6349) !default;
+$link-hover-color: sp-rgb(--now-color--link-3, #3A4C38) !default;
+$link-hover-decoration: underline !default;
+
+// --- Borders / dividers ---------------------------------------------------
+$border-primary: sp-rgb(--now-color_border--primary, #A89C91) !default;
+$border-secondary: sp-rgb(--now-color_border--secondary, #CFC5BB) !default;
+$border-tertiary: sp-rgb(--now-color_border--tertiary, #E2DAD2) !default;
+$panel-default-border: $border-tertiary !default;
+$panel-inner-border: $border-tertiary !default;
+$panel-border-color: $border-tertiary !default;
+$table-border-color: $border-tertiary !default;
+$nav-tabs-border-color: $border-tertiary !default;
+$nav-tabs-justified-link-border-color: $border-tertiary !default;
+$sp-b-border-color: $border-tertiary !default;
+
+// --- Navbar (consumed by the EDP header CSS) ------------------------------
+$navbar-inverse-bg: sp-rgb(--now-color_background--primary, #FFFCFA) !default;
+$navbar-inverse-link-color: sp-rgb(--now-color_text--primary, #2A2622) !default;
+$navbar-inverse-link-hover-color: sp-rgb(--now-color--primary-3, #3A4C38) !default;
+$navbar-inverse-link-hover-bg: sp-rgb(--now-color--primary-0, #E4EBDF) !default;
+$navbar-inverse-link-active-color: sp-rgb(--now-color--primary-3, #3A4C38) !default;
+$navbar-inverse-link-active-bg: sp-rgb(--now-color--primary-0, #E4EBDF) !default;
+$navbar-inverse-link-hover-border: sp-rgb(--now-color--primary-1, #6E8B6B) !default;
+$sp-navbar-divider-color: sp-rgb(--now-color_divider--tertiary, #E2DAD2) !default;
+$sp-navbar-bottom-width: 0.0625rem !default;
+$sp-navbar-toggle-border-color: sp-rgb(--now-color_border--secondary, #CFC5BB) !default;
+
+// --- Logo sizing (consumed by the EDP header CSS) -------------------------
+$sp-logo-margin-x: 16px !default;
+$sp-logo-margin-y: 8px !default;
+$sp-logo-max-height: 36px !default;
+$sp-logo-max-width: 200px !default;
+$sp-logo-mobile-max-width: 150px !default;
+
+// --- Buttons --------------------------------------------------------------
+$btn-primary-color: sp-rgb(--now-color_text--primary-actionable, #FFFCFA) !default;
+$btn-primary-bg: $brand-primary-dark !default;
+$btn-primary-border: $brand-primary-dark !default;
+$btn-default-color: $brand-primary-dark !default;
+$btn-default-bg: $background-primary !default;
+$btn-default-border: $border-secondary !default;
+$btn-success-bg: $brand-success !default;
+$btn-success-border: $brand-success !default;
+$btn-success-color: $btn-primary-color !default;
+$btn-clear-bg: transparent !default;
+$btn-clear-text: $text-tertiary !default;
+$btn-disabled-opacity: 0.4 !default;
+$btn-interactive: sp-rgb(--now-color--interactive-2, #4C6349) !default;
+$button-selected-color: $btn-primary-bg !default;
+$login-btn-bg: $btn-primary-bg !default;
+$login-btn-border: $btn-primary-border !default;
+$login-mask-btn-bg: $background-primary !default;
+$transparent-button-color: $brand-primary-dark !default;
+
+// --- Form fields ----------------------------------------------------------
+$input-border: sp-rgb(--now-color_border--primary, #A89C91) !default;
+$input-border-focus: sp-rgb(--now-color--focus-ring, #556E52) !default;
+$input-border-tab-focus: $input-border-focus !default;
+$input-group-addon-bg: $background-secondary !default;
+$sp-form-field--background-color: $background-primary !default;
+$sp-form-field--background-color--readonly: $background-tertiary !default;
+$sp-form-field-placeholder: $text-tertiary !default;
+$panel-focus: sp-rgb(--now-color--focus-2, #556E52) !default;
+$not-webkit-outline-color: $input-border-focus !default;
+$webkit-outline-color: $input-border-focus !default;
+
+// --- Panels ---------------------------------------------------------------
+$panel-heading-background: $background-primary !default;
+$panel-heading-color: $text-primary !default;
+$panel-heading-icon-color: $text-primary !default;
+$panel-default-heading-bg: $background-secondary !default;
+$panel-default-text: $text-tertiary !default;
+$panel-default-text-color: $text-primary !default;
+$panel-primary-border: $brand-primary !default;
+$panel-primary-heading-bg: $brand-primary-dark !default;
+$panel-primary-text: sp-rgb(--now-color_text--primary-actionable, #FFFCFA) !default;
+$panel-info-heading-bg: $brand-primary-lighter !default;
+$panel-box-shadow: 0 0.25rem 0.75rem 0 rgba(68, 62, 57, 0.10) !default;
+$panel-list-item: $brand-primary-lighter !default;
+$list-group-hover-bg: $brand-primary-lighter !default;
+$list-group-link-heading-color: $text-tertiary !default;
+
+// --- Alerts / states ------------------------------------------------------
+$state-success-bg: sp-rgb(--now-color_alert--positive-0, #D7E6DA) !default;
+$state-success-border: $brand-success !default;
+$state-success-text: $text-primary !default;
+$state-warning-bg: sp-rgb(--now-color_alert--warning-0, #F2E9D2) !default;
+$state-warning-border: $brand-warning !default;
+$state-warning-text: $text-primary !default;
+$state-danger-bg: sp-rgb(--now-color_alert--critical-0, #F6DEDE) !default;
+$state-danger-border: $brand-danger !default;
+$state-danger-text: $text-primary !default;
+$state-info-bg: sp-rgb(--now-color_alert--info-0, #DCE7ED) !default;
+$state-info-border: $brand-info !default;
+$state-info-text: $text-primary !default;
+$alert-success-bg: $state-success-bg !default;
+$alert-success-border: $state-success-border !default;
+$alert-success-text: $text-primary !default;
+$alert-warning-bg: $state-warning-bg !default;
+$alert-warning-border: $state-warning-border !default;
+$alert-warning-text: $text-primary !default;
+$alert-danger-bg: $state-danger-bg !default;
+$alert-danger-border: $state-danger-border !default;
+$alert-danger-text: $text-primary !default;
+$alert-info-bg: $state-info-bg !default;
+$alert-info-border: $state-info-border !default;
+$alert-info-text: $text-primary !default;
+$label-success-bg: $brand-success !default;
+$label-info-bg: $brand-info !default;
+$label-warning-bg: $brand-warning !default;
+$label-danger-bg: $brand-danger !default;
+$label-primary-bg: $brand-primary-dark !default;
+
+// --- Dropdowns / modals / tooltips / popovers -----------------------------
+$dropdown-bg: $background-primary !default;
+$dropdown-border: $border-tertiary !default;
+$dropdown-fallback-border: $border-tertiary !default;
+$dropdown-divider-bg: $border-tertiary !default;
+$dropdown-link-color: $text-primary !default;
+$dropdown-link-hover-color: $brand-primary-darker !default;
+$dropdown-link-hover-bg: $brand-primary-lighter !default;
+$dropdown-link-active-bg: $brand-primary-dark !default;
+$dropdown-link-active-color: $panel-primary-text !default;
+$dropdown-link-disabled-color: $gray-light !default;
+$modal-content-bg: $background-primary !default;
+$modal-content-border-color: $border-tertiary !default;
+$modal-content-fallback-border-color: $border-tertiary !default;
+$modal-header-close-color: $text-primary !default;
+$popover-bg: $background-primary !default;
+$popover-border-color: $border-tertiary !default;
+$popover-arrow-color: $background-primary !default;
+$popover-arrow-outer-color: $border-tertiary !default;
+$tooltip-bg: sp-rgb(--now-color_text--primary, #2A2622) !default;
+$tooltip-color: sp-rgb(--now-color_background--primary, #FFFCFA) !default;
+$tooltip-arrow-color: $tooltip-bg !default;
+$tooltip-border-color: $tooltip-bg !default;
+
+// --- Tabs -----------------------------------------------------------------
+$sp-nav-tabs-color: $text-secondary !default;
+$sp-nav-tabs-hover-color: $brand-primary-darker !default;
+$sp-nav-tabs-active-tab: $brand-primary-dark !default;
+$sp-nav-tabs-border-bottom-width: 2px !default;
+$sp-nav-tabs-hover-bg: transparent !default;
+$sp-nav-tabs-hover-font-weight: 600 !default;
+$sp-nav-tabs-active-font-weight: 600 !default;
+$sp-nav-tabs-focus-box-shadow: inset 0 0 0 2px $panel-focus !default;
+$nav-tabs-link-hover-border-color: transparent !default;
+$nav-tabs-active-link-hover-bg: transparent !default;
+$nav-tabs-active-link-hover-color: $brand-primary-darker !default;
+$nav-tabs-active-link-hover-border-color: $brand-primary-dark !default;
+
+// --- Misc Service Portal hooks -------------------------------------------
+$carousel-text-shadow: none !default;
+$carousel-control-color: $text-secondary !default;
+$quicklinks-background: $brand-primary-lighter !default;
+$sp-loading-color: $brand-primary !default;
+$sp-disabled-breadcrumb: $text-tertiary !default;
+$sp-avatar-border-color: $border-tertiary !default;
+$sp-avatar-text-color: $text-secondary !default;
+$sp-focus-border-color: $background-primary !default;
+$sp-announcement-title-color: $text-primary !default;
+$sp-list-cell-color-selected: $panel-primary-text !default;
+$data-table-selected: $brand-primary-dark !default;
+$table-heading: $text-primary !default;
+$status-table-heading: $text-primary !default;
+$attachment-icon-color: $link-color !default;
+$sp-file-drop-zone-color: $text-secondary !default;
+$checkbox-selection-color: $brand-primary-dark !default;
+$sc-label-color: $text-secondary !default;
+$sc-field-error-color: $brand-danger !default;
+$sc-field-error-label-color: $brand-danger !default;
+$sc-field-error-text-color: $panel-primary-text !default;
+$sc-sticky-item-header-bg: $background-primary !default;
+$sp-sc-accordion-hover: $background-secondary !default;
+$sp-sc-category-list-hover-color: $link-color !default;
+$sp-sc-category-list-badge-color: $text-tertiary !default;
+$category-view-toggle-color: $text-tertiary !default;
+$sp-clear-all-color: $link-color !default;
+$sp-dropdown-menu-options-color: $link-color !default;
+$sp-search-results-highlight-color: #E4EBDF !default;
+$sp-faceted-search-interactive-color: $link-color !default;
+$search-list-item-focus: $background-tertiary !default;
+$accessible-placeholder-gray: $text-tertiary !default;
+$color-lightest: $panel-primary-text !default;
+$kb-title-color: $link-color !default;
+$kb-border: $border-tertiary !default;
+$kb-create-comment-bg: $background-primary !default;
+$kb-article-view-link-color: $link-color !default;
+$kb-article-view-link-color-hover: $link-hover-color !default;
+$kb-main-search-color: $panel-primary-text !default;
+$icon-link-glyph-color: $panel-primary-text !default;
+
+
+/* --------------------------------------------------------------------------
+ * 2. SCALE VARIABLES
+ * Spacing / type / icon scales. Widget stylesheets in this app MUST use
+ * these instead of arbitrary pixel values. Nothing below $sp-text-xs (12px).
+ * -------------------------------------------------------------------------- */
+$sp-space-1: 4px !default;
+$sp-space-2: 8px !default;
+$sp-space-3: 12px !default;
+$sp-space-4: 16px !default;
+$sp-space-5: 24px !default;
+$sp-space-6: 32px !default;
+$sp-space-7: 48px !default;
+$sp-space-8: 64px !default;
+
+$sp-text-xs: 12px !default;
+$sp-text-sm: 14px !default;
+$sp-text-base: 16px !default;
+$sp-text-md: 18px !default;
+$sp-text-lg: 22px !default;
+$sp-text-xl: 26px !default;
+$sp-text-2xl: 32px !default;
+
+$sp-icon-xs: 12px !default;
+$sp-icon-sm: 16px !default;
+$sp-icon-md: 20px !default;
+$sp-icon-lg: 32px !default;
+$sp-icon-xl: 48px !default;
+
+
+/* --------------------------------------------------------------------------
+ * 3. RUNTIME DESIGN TOKENS — LIGHT  (default) and DARK
+ *
+ * The Theme Toggle widget flips ONE attribute on &lt;html&gt;:
+ *     document.documentElement.setAttribute('data-edp-theme', 'dark')
+ * Everything below re-resolves from that single switch.
+ *
+ * Contrast notes (verified, WCAG 2.x relative-luminance maths):
+ *   light: #2A2622 on #FFFCFA = 14.6:1 | #635A52 on #F7F3EF = 6.4:1
+ *          #4C6349 on #F7F3EF =  6.0:1 | #FFFCFA on #4C6349 = 6.5:1
+ *          #6E8B6B on #FFFCFA =  3.7:1 (non-text accent / borders only)
+ *   dark : #F3EDE7 on #1B1816 = 15.3:1 | #C3B8AE on #1B1816 = 9.0:1
+ *          #BCD2B4 on #1B1816 = 11.0:1 | #1B1816 on #A8C2A0 = 9.2:1
+ * Glass surfaces below are intentionally &gt;=0.72 alpha (tiles/dialogs &gt;=0.88)
+ * so text never sits on a layer translucent enough to drop below 4.5:1.
+ * -------------------------------------------------------------------------- */
+:root,
+[data-edp-theme='light'] {
+    /* --- sage accent ramp (muted, grey-green — dried sage leaf) --- */
+    --edp-sage-50: #F4F7F2;
+    --edp-sage-100: #E4EBDF;
+    --edp-sage-200: #CBD9C4;
+    --edp-sage-300: #AEC2A7;
+    --edp-sage-400: #8AA37E;
+    --edp-sage-500: #7D9471;
+    --edp-sage-600: #6E8B6B;
+    --edp-sage-700: #556E52;
+    --edp-sage-800: #3A4C38;
+
+    /* --- warm neutral ramp --- */
+    --edp-stone-0: #FFFCFA;
+    --edp-stone-50: #F7F3EF;
+    --edp-stone-100: #EFE9E3;
+    --edp-stone-200: #E2DAD2;
+    --edp-stone-300: #CFC5BB;
+    --edp-stone-400: #A89C91;
+    --edp-stone-500: #857A70;
+    --edp-stone-600: #635A52;
+    --edp-stone-700: #443E39;
+    --edp-stone-800: #2A2622;
+    --edp-stone-900: #1B1816;
+
+    /* --- semantic surfaces --- */
+    --edp-bg: #F7F3EF;
+    --edp-bg-elevated: #FFFCFA;
+    --edp-surface: rgba(255, 252, 250, 0.82);
+    --edp-surface-strong: rgba(255, 252, 250, 0.94);
+    --edp-surface-hover: rgba(255, 252, 250, 0.96);
+    --edp-surface-sunken: rgba(239, 233, 227, 0.72);
+    --edp-hairline: rgba(68, 62, 57, 0.12);
+    --edp-hairline-strong: rgba(68, 62, 57, 0.22);
+    --edp-scrim: rgba(27, 24, 22, 0.52);
+
+    /* --- frosted glass layer (tiles, carousel, dialogs) ---
+       `--edp-glass-surface` stays &gt;=0.88 alpha so body copy on glass keeps
+       4.5:1 in both themes even with the heavier blur below. */
+    --edp-glass-surface: rgba(255, 252, 250, 0.88);
+    --edp-glass-sheen: rgba(255, 255, 255, 0.60);
+    --edp-glass-sheen-soft: rgba(255, 255, 255, 0.14);
+    --edp-glass-highlight: rgba(255, 255, 255, 0.92);
+    --edp-glass-edge: rgba(255, 255, 255, 0.42);
+    --edp-glass-shade: rgba(68, 62, 57, 0.06);
+    --edp-blur-glass: 30px;
+    --edp-glass-saturate: 185%;
+
+    /* --- semantic text --- */
+    --edp-text: #2A2622;
+    --edp-text-secondary: #443E39;
+    --edp-text-muted: #635A52;
+    --edp-text-on-accent: #FFFCFA;
+
+    /* --- accent (sage) ---
+       `--edp-accent`        : the anchor sage — borders, indicators, dots
+       `--edp-accent-strong` : deep sage used behind --edp-text-on-accent so
+                               CTA label text clears 4.5:1 (6.5:1 measured)
+       `--edp-accent-ink`    : sage text on light surfaces (6.0:1 measured) */
+    --edp-accent: #6E8B6B;
+    --edp-accent-strong: #4C6349;
+    --edp-accent-hover: #556E52;
+    --edp-accent-soft: rgba(110, 139, 107, 0.12);
+    --edp-accent-soft-hover: rgba(110, 139, 107, 0.20);
+    --edp-accent-ink: #4C6349;
+    --edp-focus: #556E52;
+
+    /* --- effects --- */
+    --edp-blur: 16px;
+    --edp-blur-strong: 24px;
+    --edp-radius-sm: 8px;
+    --edp-radius: 14px;
+    --edp-radius-lg: 20px;
+    --edp-radius-pill: 999px;
+    --edp-shadow-1: 0 1px 2px rgba(68, 62, 57, 0.06), 0 2px 8px rgba(68, 62, 57, 0.06);
+    --edp-shadow-2: 0 2px 4px rgba(68, 62, 57, 0.07), 0 10px 24px rgba(68, 62, 57, 0.10);
+    --edp-shadow-3: 0 4px 8px rgba(68, 62, 57, 0.09), 0 20px 48px rgba(68, 62, 57, 0.16);
+    --edp-aurora-1: rgba(174, 194, 167, 0.60);
+    --edp-aurora-2: rgba(203, 217, 196, 0.55);
+    --edp-aurora-3: rgba(207, 197, 187, 0.55);
+    --edp-aurora-4: rgba(255, 252, 250, 0.70);
+
+    /* --- UXF token remap: keeps sp-rgb() / OOTB widgets on the sage palette
+           and makes them flip with the same attribute. Values are the
+           "r, g, b" triplets sp-rgb() expects. --- */
+    --now-color--primary-0: 228, 235, 223;
+    --now-color--primary-1: 110, 139, 107;
+    --now-color--primary-2: 76, 99, 73;
+    --now-color--primary-3: 58, 76, 56;
+    --now-color--interactive-1: 174, 194, 167;
+    --now-color--interactive-2: 76, 99, 73;
+    --now-color--link-2: 76, 99, 73;
+    --now-color--link-3: 58, 76, 56;
+    --now-color--focus-ring: 85, 110, 82;
+    --now-color--focus-2: 85, 110, 82;
+    --now-color_background--primary: 255, 252, 250;
+    --now-color_background--secondary: 247, 243, 239;
+    --now-color_background--tertiary: 226, 218, 210;
+    --now-color_text--primary: 42, 38, 34;
+    --now-color_text--secondary: 68, 62, 57;
+    --now-color_text--tertiary: 99, 90, 82;
+    --now-color_text--primary-actionable: 255, 252, 250;
+    --now-color_border--primary: 168, 156, 145;
+    --now-color_border--secondary: 207, 197, 187;
+    --now-color_border--tertiary: 226, 218, 210;
+    --now-color_divider--tertiary: 226, 218, 210;
+    --now-form-field--background-color: 255, 252, 250;
+}
+
+[data-edp-theme='dark'] {
+    --edp-bg: #1B1816;
+    --edp-bg-elevated: #2A2622;
+    --edp-surface: rgba(42, 38, 34, 0.80);
+    --edp-surface-strong: rgba(42, 38, 34, 0.94);
+    --edp-surface-hover: rgba(54, 48, 44, 0.94);
+    --edp-surface-sunken: rgba(27, 24, 22, 0.76);
+    --edp-hairline: rgba(243, 237, 231, 0.12);
+    --edp-hairline-strong: rgba(243, 237, 231, 0.24);
+    --edp-scrim: rgba(10, 9, 8, 0.66);
+
+    /* Frosted glass layer — dark twin of the light tokens. */
+    --edp-glass-surface: rgba(42, 38, 34, 0.88);
+    --edp-glass-sheen: rgba(243, 237, 231, 0.10);
+    --edp-glass-sheen-soft: rgba(243, 237, 231, 0.04);
+    --edp-glass-highlight: rgba(243, 237, 231, 0.26);
+    --edp-glass-edge: rgba(243, 237, 231, 0.08);
+    --edp-glass-shade: rgba(10, 9, 8, 0.28);
+    --edp-blur-glass: 30px;
+    --edp-glass-saturate: 165%;
+
+    --edp-text: #F3EDE7;
+    --edp-text-secondary: #E2DAD2;
+    --edp-text-muted: #C3B8AE;
+    --edp-text-on-accent: #1B1816;
+
+    /* Sage lifted for dark surfaces: #A8C2A0 = 9.2:1 on #1B1816,
+       #BCD2B4 = 11.0:1, and #1B1816 on #A8C2A0 = 9.2:1. */
+    --edp-accent: #A8C2A0;
+    --edp-accent-strong: #A8C2A0;
+    --edp-accent-hover: #C0D6B8;
+    --edp-accent-soft: rgba(168, 194, 160, 0.16);
+    --edp-accent-soft-hover: rgba(168, 194, 160, 0.24);
+    --edp-accent-ink: #BCD2B4;
+    --edp-focus: #BCD2B4;
+
+    --edp-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.32), 0 2px 8px rgba(0, 0, 0, 0.28);
+    --edp-shadow-2: 0 2px 4px rgba(0, 0, 0, 0.36), 0 10px 24px rgba(0, 0, 0, 0.40);
+    --edp-shadow-3: 0 4px 8px rgba(0, 0, 0, 0.40), 0 20px 48px rgba(0, 0, 0, 0.52);
+    --edp-aurora-1: rgba(85, 110, 82, 0.52);
+    --edp-aurora-2: rgba(58, 76, 56, 0.60);
+    --edp-aurora-3: rgba(68, 62, 57, 0.60);
+    --edp-aurora-4: rgba(27, 24, 22, 0.70);
+
+    --now-color--primary-0: 58, 76, 56;
+    --now-color--primary-1: 188, 210, 180;
+    --now-color--primary-2: 168, 194, 160;
+    --now-color--primary-3: 228, 235, 223;
+    --now-color--interactive-1: 85, 110, 82;
+    --now-color--interactive-2: 188, 210, 180;
+    --now-color--link-2: 188, 210, 180;
+    --now-color--link-3: 228, 235, 223;
+    --now-color--focus-ring: 188, 210, 180;
+    --now-color--focus-2: 188, 210, 180;
+    --now-color_background--primary: 42, 38, 34;
+    --now-color_background--secondary: 27, 24, 22;
+    --now-color_background--tertiary: 68, 62, 57;
+    --now-color_text--primary: 243, 237, 231;
+    --now-color_text--secondary: 226, 218, 210;
+    --now-color_text--tertiary: 195, 184, 174;
+    --now-color_text--primary-actionable: 27, 24, 22;
+    --now-color_border--primary: 133, 122, 112;
+    --now-color_border--secondary: 99, 90, 82;
+    --now-color_border--tertiary: 68, 62, 57;
+    --now-color_divider--tertiary: 68, 62, 57;
+    --now-form-field--background-color: 42, 38, 34;
+}
+
+
+/* --------------------------------------------------------------------------
+ * 4. GLOBAL SURFACE / FOCUS / MOTION
+ * NOTE: deliberately no `body { padding-top }`, no `.navbar-fixed-top` and no
+ * bare `nav {}` rules — the Service Portal framework owns header positioning.
+ * -------------------------------------------------------------------------- */
+
+.sp-page-root {
+    background-color: var(--edp-bg);
+    color: var(--edp-text);
+}
+
+section.page,
+main.body {
+    background-color: var(--edp-bg);
+}
+
+/* Visible focus ring on EVERY interactive element, in both themes. */
+a:focus,
+button:focus,
+input:focus,
+select:focus,
+textarea:focus,
+[tabindex]:focus,
+.btn:focus,
+.form-control:focus {
+    outline: 2px solid var(--edp-focus);
+    outline-offset: 2px;
+}
+
+/* Where the browser supports it, hide the ring for pointer interaction only. */
+.edp-focusable:focus:not(:focus-visible) {
+    outline: none;
+}
+
+.edp-focusable:focus-visible {
+    outline: 2px solid var(--edp-focus);
+    outline-offset: 2px;
+}
+
+/* Screen-reader-only helper used by the EDP widgets. */
+.edp-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Background scroll lock while the Topic Tiles modal is open. */
+body.edp-no-scroll {
+    overflow: hidden;
+}
+
+/* Glassmorphic treatment for every Bootstrap panel in the portal — this is
+ * what makes OOTB widgets (My Requests, catalog forms, ...) match the theme. */
+.panel {
+    background-color: var(--edp-surface);
+    border: 1px solid var(--edp-hairline);
+    border-radius: var(--edp-radius);
+    box-shadow: var(--edp-shadow-1);
+    -webkit-backdrop-filter: blur(var(--edp-blur)) saturate(140%);
+    backdrop-filter: blur(var(--edp-blur)) saturate(140%);
+    color: var(--edp-text);
+}
+
+.panel &gt; .panel-heading {
+    background-color: transparent;
+    border-bottom: 1px solid var(--edp-hairline);
+    color: var(--edp-text);
+    padding: $sp-space-4 $sp-space-5;
+}
+
+.panel .panel-title {
+    color: var(--edp-text);
+    font-size: $sp-text-md;
+    font-weight: 600;
+}
+
+.panel &gt; .panel-footer {
+    background-color: var(--edp-surface-sunken);
+    border-top: 1px solid var(--edp-hairline);
+    color: var(--edp-text-secondary);
+}
+
+.panel .list-group-item {
+    background-color: transparent;
+    border-color: var(--edp-hairline);
+    color: var(--edp-text);
+}
+
+.panel .list-group-item:hover {
+    background-color: var(--edp-accent-soft);
+}
+
+.text-muted {
+    color: var(--edp-text-muted);
+}
+
+/* Buttons — the filled button uses --edp-accent-strong so the label keeps
+   4.5:1 against the fill in both themes (light 6.5:1 / dark 9.2:1). */
+.btn-primary {
+    background-color: var(--edp-accent-strong);
+    border-color: var(--edp-accent-strong);
+    color: var(--edp-text-on-accent);
+    border-radius: var(--edp-radius-pill);
+    font-weight: 600;
+    transition: background-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--edp-accent-hover);
+    border-color: var(--edp-accent-hover);
+    color: var(--edp-text-on-accent);
+    box-shadow: var(--edp-shadow-2);
+}
+
+.btn-default {
+    background-color: var(--edp-surface-strong);
+    border-color: var(--edp-hairline-strong);
+    color: var(--edp-accent-ink);
+    border-radius: var(--edp-radius-pill);
+    font-weight: 600;
+}
+
+.btn-default:hover,
+.btn-default:focus {
+    background-color: var(--edp-surface-hover);
+    border-color: var(--edp-accent);
+    color: var(--edp-accent-ink);
+}
+
+/* Form controls */
+.form-control {
+    background-color: var(--edp-bg-elevated);
+    border: 1px solid var(--edp-hairline-strong);
+    border-radius: var(--edp-radius-sm);
+    box-shadow: none;
+    color: var(--edp-text);
+    font-size: $sp-text-base;
+}
+
+.form-control:focus {
+    border-color: var(--edp-accent);
+}
+
+label,
+.control-label {
+    color: var(--edp-text-secondary);
+    font-size: $sp-text-sm;
+    font-weight: 600;
+}
+
+
+/* --------------------------------------------------------------------------
+ * 5. CATALOG ORDERING EXPERIENCE
+ * Themes the OOTB `sc_cat_item` / `sc_category` / `sc_landing` pages so that
+ * ordering a catalog item feels like part of this portal.
+ * NO SPPage wrapper is created for those OOTB pages — they are styled from
+ * here, which is the supported approach.
+ * -------------------------------------------------------------------------- */
+
+/* Catalog item form shell + record-producer shell */
+.sc-cat-item,
+.sc-cat-item-producer,
+.cat-item-container,
+.sc-content,
+.sc-sticky-item-header,
+.sp-form-container {
+    background-color: var(--edp-surface);
+    border-radius: var(--edp-radius);
+    color: var(--edp-text);
+}
+
+.sc-sticky-item-header {
+    border-bottom: 1px solid var(--edp-hairline);
+    -webkit-backdrop-filter: blur(var(--edp-blur-strong));
+    backdrop-filter: blur(var(--edp-blur-strong));
+}
+
+/* Variable rows inside the ordering form */
+.sc-cat-item .form-group,
+.cat-item-container .form-group,
+.sp-form-container .form-group {
+    margin-bottom: $sp-space-4;
+}
+
+/* Catalog item / category cards on the landing + category pages */
+.sc-cat-item-content,
+.sc-category-list .panel,
+.sc-cat-item-tile,
+.sp-quick-link {
+    background-color: var(--edp-surface);
+    border: 1px solid var(--edp-hairline);
+    border-radius: var(--edp-radius);
+    box-shadow: var(--edp-shadow-1);
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.sc-cat-item-content:hover,
+.sc-cat-item-tile:hover,
+.sp-quick-link:hover {
+    border-color: var(--edp-accent);
+    box-shadow: var(--edp-shadow-2);
+    transform: translateY(-2px);
+}
+
+/* Order / Submit action area */
+.sc-cat-item .btn-primary,
+.cat-item-container .btn-primary,
+.sc-sticky-item-header .btn-primary {
+    border-radius: var(--edp-radius-pill);
+    padding-left: $sp-space-5;
+    padding-right: $sp-space-5;
+}
+
+/* Breadcrumbs above the catalog form */
+.breadcrumb-container,
+.breadcrumbs {
+    background-color: transparent;
+}
+
+.breadcrumbs .nav-pills &gt; li &gt; a {
+    color: var(--edp-accent-ink);
+}
+
+
+/* --------------------------------------------------------------------------
+ * 6. REDUCED MOTION
+ * Every continuous animation in this portal is defined inside the widgets,
+ * but this global guard disables transitions/animations portal-wide for users
+ * who ask for reduced motion.
+ * -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    .panel,
+    .btn,
+    .btn-primary,
+    .btn-default,
+    .sc-cat-item-content,
+    .sc-cat-item-tile,
+    .sp-quick-link {
+        transition: none;
+    }
+
+    .sc-cat-item-content:hover,
+    .sc-cat-item-tile:hover,
+    .sp-quick-link:hover {
+        transform: none;
+    }
+}
+</css_variables>
+        <footer display_value="EDP Portal Footer">f89a5e61e2e64c189cfed92c4b3963b5</footer>
+        <footer_fixed>false</footer_fixed>
+        <header display_value="EDP Portal Header">44df4c7837214a738801307def2dde7b</header>
+        <icon>f3000194025684ffbefdcf1f12c8fcf9</icon>
+        <logo>7008baff3c61c0970e75b16d01b44c06</logo>
+        <logo_alt_text>Enterprise Digital</logo_alt_text>
+        <matching_now_experience_theme/>
+        <name>EDP Sage</name>
+        <navbar_fixed>true</navbar_fixed>
+        <sys_class_name>sp_theme</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-10-14 01:32:54</sys_created_on>
+        <sys_id>69aaf9db2f69437f883e1eaadd1714a7</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>EDP Rose Cotton</sys_name>
+        <sys_package display_value="Enterprise Digital" source="x_exls_enterpris_0">0f5d34e783f743108b9b98c6feaad3ee</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Enterprise Digital">0f5d34e783f743108b9b98c6feaad3ee</sys_scope>
+        <sys_update_name>sp_theme_69aaf9db2f69437f883e1eaadd1714a7</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-10-14 01:32:54</sys_updated_on>
+        <turn_off_scss_compilation>false</turn_off_scss_compilation>
+    </sp_theme>
+    <sys_translated_text action="delete_multiple" query="documentkey=69aaf9db2f69437f883e1eaadd1714a7"/>
+</record_update>

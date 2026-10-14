@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_header_footer">
+    <sp_header_footer action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[/* ==========================================================================
+ * Enterprise Digital Portal — FOOTER client script
+ * ==========================================================================
+ * Header/footer scripts use `$scope` / `data`, never the `c.` alias.
+ * The footer is presentational; the only behaviour is a defensive theme
+ * fallback (in case the footer renders on a page where the header did not).
+ * ========================================================================== */
+api.controller = function ($scope, $window) {
+    var THEME_ATTR = 'data-edp-theme';
+    var THEME_KEY = 'edp-theme';
+
+    var root = $window.document.documentElement;
+    if (!root.getAttribute(THEME_ATTR)) {
+        var stored = null;
+        try {
+            stored = $window.localStorage ? $window.localStorage.getItem(THEME_KEY) : null;
+        } catch (storageErr) {
+            stored = null;
+        }
+        if (stored !== 'light' && stored !== 'dark') {
+            stored = ($window.matchMedia && $window.matchMedia('(prefers-color-scheme: dark)').matches)
+                ? 'dark'
+                : 'light';
+        }
+        root.setAttribute(THEME_ATTR, stored);
+    }
+
+    $scope.currentYear = new Date().getFullYear();
+};
+]]></client_script>
+        <controller_as>c</controller_as>
+        <css>/* ==========================================================================
+ * Enterprise Digital Portal — FOOTER styles
+ * ==========================================================================
+ * Glass surface sitting on the warm neutral page background.
+ * All colours resolve from the theme's `--edp-*` runtime tokens, so the footer
+ * flips with `data-edp-theme` on &lt;html&gt;. All sizes use the theme $sp-* scales.
+ * ========================================================================== */
+
+.edp-footer {
+    position: relative;
+    margin-top: $sp-space-8;
+    padding: $sp-space-7 0 $sp-space-5;
+    background-color: var(--edp-surface);
+    border-top: 1px solid var(--edp-hairline);
+    -webkit-backdrop-filter: blur(var(--edp-blur)) saturate(140%);
+    backdrop-filter: blur(var(--edp-blur)) saturate(140%);
+    color: var(--edp-text-secondary);
+}
+
+/* A thin sage hairline along the very top edge — the only accent down here. */
+.edp-footer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--edp-accent) 30%,
+        var(--edp-accent) 70%,
+        transparent 100%
+    );
+    opacity: 0.55;
+}
+
+/* ---------------- 1. BRAND -------------------------------------------- */
+.edp-footer-brand {
+    margin-bottom: $sp-space-5;
+}
+
+.edp-footer-wordmark {
+    color: var(--edp-text);
+    font-size: $sp-text-md;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin: 0 0 $sp-space-2;
+}
+
+.edp-footer-tagline {
+    color: var(--edp-text-muted);
+    font-size: $sp-text-sm;
+    line-height: 1.5;
+    margin: 0;
+    max-width: 34ch;
+}
+
+/* ---------------- 2. LINK COLUMNS ------------------------------------- */
+.edp-footer-col {
+    margin-bottom: $sp-space-5;
+}
+
+.edp-footer-col-title {
+    color: var(--edp-text);
+    font-size: $sp-text-xs;
+    font-weight: 700;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    margin: 0 0 $sp-space-3;
+}
+
+.edp-footer-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.edp-footer-list &gt; li {
+    margin-bottom: $sp-space-2;
+}
+
+.edp-footer-link {
+    color: var(--edp-text-secondary);
+    font-size: $sp-text-sm;
+    text-decoration: none;
+    border-radius: var(--edp-radius-sm);
+    display: inline-block;
+    transition: color 160ms ease, transform 160ms ease;
+}
+
+.edp-footer-link:hover,
+.edp-footer-link:focus {
+    color: var(--edp-accent-ink);
+    text-decoration: underline;
+    transform: translateX(2px);
+}
+
+/* ---------------- 3. LEGAL ------------------------------------------- */
+.edp-footer-rule {
+    border: 0;
+    border-top: 1px solid var(--edp-hairline);
+    margin: $sp-space-4 0 $sp-space-4;
+}
+
+.edp-footer-fineprint {
+    color: var(--edp-text-muted);
+    font-size: $sp-text-xs;
+    margin: 0;
+}
+
+/* ---------------- RESPONSIVE ----------------------------------------- */
+@media (max-width: 767px) {
+    .edp-footer {
+        padding: $sp-space-6 0 $sp-space-4;
+        margin-top: $sp-space-6;
+    }
+
+    .edp-footer-tagline {
+        max-width: none;
+    }
+}
+
+/* ---------------- REDUCED MOTION ------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    .edp-footer-link {
+        transition: none;
+    }
+
+    .edp-footer-link:hover,
+    .edp-footer-link:focus {
+        transform: none;
+    }
+}
+</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description>Enterprise Digital portal footer: glass surface with a wordmark, three configurable link columns and a legal strip.</description>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>x_exls_enterpris_0_edp_footer</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+}]]></link>
+        <name>EDP Portal Footer</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[/* ==========================================================================
+ * Enterprise Digital Portal — FOOTER server script
+ * ==========================================================================
+ * CRITICAL: NO IIFE wrapper (same rule as the header).
+ * Scoped-safe only: `new GlideDateTime()` — NOT `nowDateTime()`.
+ *
+ * TO CUSTOMISE THE FOOTER LINKS: edit `data.columns` below. The template
+ * renders whatever is in this array, so no HTML changes are needed.
+ * ========================================================================== */
+
+var portalRecord = $sp.getPortalRecord();
+
+data.portalTitle = portalRecord ? portalRecord.getValue('title') : 'Enterprise Digital';
+data.tagline = gs.getMessage('Self-service for the Enterprise Digital delivery programme.');
+data.generatedOn = new GlideDateTime().getDisplayValue();
+data.copyright = gs.getMessage('{0} Enterprise Digital', new GlideDateTime().getYearLocalTime() + '');
+
+/* --- Footer navigation ---------------------------------------------------- *
+ * `url` values are portal-relative (`?id=<pageId>`), so they stay inside the
+ * EDP portal. Set `external: true` for off-portal links (adds target=_blank,
+ * rel=noopener and an accessible "opens in a new tab" hint).
+ * -------------------------------------------------------------------------- */
+data.columns = [
+    {
+        id: 'services',
+        title: gs.getMessage('Services'),
+        links: [
+            { label: gs.getMessage('Service catalog'), url: '?id=sc_landing' },
+            { label: gs.getMessage('Change Review Board'), url: '?id=sc_cat_item&sys_id=7518ecedb14542a59ccfc62d5058a8d5' },
+            { label: gs.getMessage('Change Deployment'), url: '?id=sc_cat_item&sys_id=9639f638440e4833b8b56ec59845cec4' }
+        ]
+    },
+    {
+        id: 'activity',
+        title: gs.getMessage('My activity'),
+        links: [
+            { label: gs.getMessage('My requests'), url: '?id=requests' },
+            { label: gs.getMessage('Change Management category'), url: '?id=sc_category&sys_id=89f36964102a4613a251b004e0c8beed' }
+        ]
+    },
+    {
+        id: 'help',
+        title: gs.getMessage('Help'),
+        links: [
+            { label: gs.getMessage('Portal home'), url: '?id=x_exls_enterpris_0_edp_home' }
+        ]
+    }
+];
+]]></script>
+        <servicenow>false</servicenow>
+        <static>false</static>
+        <sys_class_name>sp_header_footer</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-10-14 01:32:51</sys_created_on>
+        <sys_id>f89a5e61e2e64c189cfed92c4b3963b5</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>EDP Portal Footer</sys_name>
+        <sys_package display_value="Enterprise Digital" source="x_exls_enterpris_0">0f5d34e783f743108b9b98c6feaad3ee</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Enterprise Digital">0f5d34e783f743108b9b98c6feaad3ee</sys_scope>
+        <sys_update_name>sp_header_footer_f89a5e61e2e64c189cfed92c4b3963b5</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-10-14 01:32:51</sys_updated_on>
+        <template><![CDATA[<!--
+  ==========================================================================
+  Enterprise Digital Portal — FOOTER template
+  ==========================================================================
+  Glassmorphic footer. Deliberately simple and declarative so it is easy to
+  extend.
+
+  LAYOUT MAP:
+    1. BRAND     wordmark + tagline
+    2. COLUMNS   three link columns, all driven from `data.columns` in
+                 server_script.js — add/remove entries there, not here
+    3. LEGAL     copyright + generated timestamp
+  ==========================================================================
+-->
+<div>
+  <footer class="edp-footer" role="contentinfo">
+    <div class="container">
+      <div class="row edp-footer-top">
+
+        <!-- 1. BRAND -->
+        <div class="col-md-4 col-sm-12 col-xs-12 edp-footer-brand">
+          <p class="edp-footer-wordmark">{{::data.portalTitle}}</p>
+          <p class="edp-footer-tagline">{{::data.tagline}}</p>
+        </div>
+
+        <!-- 2. COLUMNS -->
+        <div class="col-md-8 col-sm-12 col-xs-12">
+          <div class="row">
+            <nav class="col-md-4 col-sm-4 col-xs-12 edp-footer-col"
+                 ng-repeat="col in ::data.columns track by col.id"
+                 aria-labelledby="edp-footer-col-{{::col.id}}">
+              <h2 class="edp-footer-col-title" id="edp-footer-col-{{::col.id}}">{{::col.title}}</h2>
+              <ul class="edp-footer-list">
+                <li ng-repeat="link in ::col.links track by $index">
+                  <a class="edp-footer-link edp-focusable"
+                     ng-href="{{::link.url}}"
+                     ng-attr-target="{{::link.external ? '_blank' : undefined}}"
+                     ng-attr-rel="{{::link.external ? 'noopener noreferrer' : undefined}}">
+                    {{::link.label}}
+                    <span class="edp-sr-only" ng-if="::link.external">${(opens in a new tab)}</span>
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. LEGAL -->
+      <div class="row edp-footer-legal">
+        <div class="col-xs-12">
+          <hr class="edp-footer-rule" />
+          <p class="edp-footer-fineprint">
+            <span>{{::data.copyright}}</span>
+            <span aria-hidden="true"> &middot; </span>
+            <span>${Page generated} {{::data.generatedOn}}</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </footer>
+</div>
+]]></template>
+    </sp_header_footer>
+</record_update>

@@ -1,0 +1,1229 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[/* ==========================================================================
+ * EDP Hero + Carousel — client script
+ * ==========================================================================
+ * Controller alias is `c` (var c = this). No $scope manipulation beyond the
+ * documented lifecycle hook.
+ *
+ * Carousel behaviour:
+ *   c.index            current slide
+ *   c.playing          auto-rotation running
+ *   c.autoplayAllowed  false when prefers-reduced-motion: reduce, or when
+ *                      the `autoplay` option is off, or with <2 slides
+ *   c.politeness       'off' while rotating, 'polite' once the user drives it
+ *   c.direction        'is-next' / 'is-prev' — drives the directional CSS
+ *                      slide transition only. No behavioural effect, and the
+ *                      transition itself is disabled under reduced motion.
+ * ========================================================================== */
+api.controller = function ($scope, $interval, $window, spUtil) {
+    var c = this;
+
+    var KEY_LEFT = 37;
+    var KEY_RIGHT = 39;
+    var KEY_HOME = 36;
+    var KEY_END = 35;
+
+    c.uid = spUtil && spUtil.generateUniqueID ? spUtil.generateUniqueID() : ('edp' + Date.now());
+    c.slides = (c.data && c.data.slides) ? c.data.slides : [];
+    c.index = 0;
+    c.hovering = false;
+    c.focused = false;
+    c.direction = 'is-next';
+
+    /* --- reduced motion: NEVER auto-advance ----------------------------- */
+    c.reduceMotion = !!($window.matchMedia &&
+        $window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+    c.autoplayAllowed = !!c.data.autoplay && !c.reduceMotion && c.slides.length > 1;
+    c.playing = c.autoplayAllowed;
+    c.politeness = c.playing ? 'off' : 'polite';
+
+    var timer = null;
+
+    function syncPoliteness() {
+        // While the carousel rotates on its own it must NOT shout at screen
+        // readers; once the user takes control, announce the new slide.
+        c.politeness = (c.playing && !c.hovering && !c.focused) ? 'off' : 'polite';
+    }
+
+    function stopTimer() {
+        if (timer) {
+            $interval.cancel(timer);
+            timer = null;
+        }
+    }
+
+    function startTimer() {
+        stopTimer();
+        if (!c.playing || c.hovering || c.focused || !c.autoplayAllowed) {
+            return;
+        }
+        timer = $interval(function () {
+            c.direction = 'is-next';
+            c.index = (c.index + 1) % c.slides.length;
+        }, c.data.intervalMs);
+    }
+
+    function restart() {
+        syncPoliteness();
+        startTimer();
+    }
+
+    /* --- navigation ----------------------------------------------------- */
+    c.goTo = function (i) {
+        if (!c.slides.length) {
+            return;
+        }
+        // Travel direction, for the CSS transition only (purely cosmetic).
+        c.direction = (i < c.index) ? 'is-prev' : 'is-next';
+        c.index = ((i % c.slides.length) + c.slides.length) % c.slides.length;
+        c.politeness = 'polite';
+        startTimer(); // reset the dwell time on the newly shown slide
+    };
+
+    c.next = function () {
+        c.goTo(c.index + 1);
+    };
+
+    c.prev = function () {
+        c.goTo(c.index - 1);
+    };
+
+    c.togglePlay = function () {
+        c.playing = !c.playing;
+        restart();
+    };
+
+    /* --- pause on hover / focus ----------------------------------------- */
+    c.setHover = function (isHovering) {
+        c.hovering = !!isHovering;
+        restart();
+    };
+
+    c.setFocus = function (isFocused) {
+        c.focused = !!isFocused;
+        restart();
+    };
+
+    /* --- keyboard ------------------------------------------------------- */
+    c.onKeydown = function ($event) {
+        if (!$event) {
+            return;
+        }
+        var code = $event.keyCode || $event.which;
+        if (code === KEY_LEFT) {
+            $event.preventDefault();
+            c.prev();
+        } else if (code === KEY_RIGHT) {
+            $event.preventDefault();
+            c.next();
+        } else if (code === KEY_HOME) {
+            $event.preventDefault();
+            c.goTo(0);
+        } else if (code === KEY_END) {
+            $event.preventDefault();
+            c.goTo(c.slides.length - 1);
+        }
+    };
+
+    /* --- lifecycle ------------------------------------------------------ */
+    startTimer();
+
+    // $scope is injected ONLY for the destroy hook — all data access stays on
+    // the `c` controller alias.
+    $scope.$on('$destroy', stopTimer);
+};
+]]></client_script>
+        <controller_as>c</controller_as>
+        <css>/* ==========================================================================
+ * EDP Hero + Carousel — styles
+ * ==========================================================================
+ * Premium feel, CSS only. No three.js / WebGL / external library of any kind.
+ *   * animated CSS gradient-mesh ("aurora") background                (kept)
+ *   * animated inline-SVG line-art doodle, drawn with stroke-dashoffset (new)
+ *   * frosted-glass carousel pane with layered translucency + depth
+ *   * refined directional slide transitions, indicators and controls
+ *   * tasteful micro-interactions on the CTA and carousel controls
+ *
+ * ALL continuous animation is wrapped in the prefers-reduced-motion guard at
+ * the bottom of this file and disabled there. The doodle additionally renders
+ * in its FINAL drawn state (stroke-dashoffset: 0) under reduced motion.
+ * ========================================================================== */
+
+/* ---------------- HERO SHELL ------------------------------------------ */
+.edp-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--edp-radius-lg);
+    padding: $sp-space-8 $sp-space-6;
+    margin: $sp-space-5 0 $sp-space-6;
+    background-color: var(--edp-surface);
+    border: 1px solid var(--edp-hairline);
+    box-shadow: var(--edp-shadow-2);
+    isolation: isolate;
+}
+
+/* --- animated gradient mesh / aurora --- */
+.edp-hero-aurora {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    border-radius: inherit;
+    background:
+        radial-gradient(120% 90% at 100% 0%, var(--edp-aurora-4) 0%, transparent 60%),
+        linear-gradient(135deg, var(--edp-bg) 0%, var(--edp-bg-elevated) 100%);
+}
+
+.edp-hero-blob {
+    position: absolute;
+    display: block;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.9;
+    will-change: transform;
+}
+
+.edp-hero-blob--1 {
+    width: 46%;
+    padding-bottom: 46%;
+    top: -14%;
+    left: -8%;
+    background: var(--edp-aurora-1);
+    animation: edp-drift-a 26s ease-in-out infinite alternate;
+}
+
+.edp-hero-blob--2 {
+    width: 40%;
+    padding-bottom: 40%;
+    bottom: -18%;
+    left: 28%;
+    background: var(--edp-aurora-2);
+    animation: edp-drift-b 32s ease-in-out infinite alternate;
+}
+
+.edp-hero-blob--3 {
+    width: 38%;
+    padding-bottom: 38%;
+    top: 6%;
+    right: -10%;
+    background: var(--edp-aurora-3);
+    animation: edp-drift-c 29s ease-in-out infinite alternate;
+}
+
+/* Very fine tonal veil so the blur gradients never look banded. */
+.edp-hero-grain {
+    position: absolute;
+    inset: 0;
+    display: block;
+    background-image: repeating-linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 0.015) 0px,
+        rgba(255, 255, 255, 0.015) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+    pointer-events: none;
+}
+
+@keyframes edp-drift-a {
+    0%   { transform: translate3d(0, 0, 0) scale(1); }
+    50%  { transform: translate3d(8%, 6%, 0) scale(1.08); }
+    100% { transform: translate3d(-4%, 10%, 0) scale(0.96); }
+}
+
+@keyframes edp-drift-b {
+    0%   { transform: translate3d(0, 0, 0) scale(1.04); }
+    50%  { transform: translate3d(-10%, -8%, 0) scale(0.94); }
+    100% { transform: translate3d(6%, -4%, 0) scale(1.1); }
+}
+
+@keyframes edp-drift-c {
+    0%   { transform: translate3d(0, 0, 0) scale(0.98); }
+    50%  { transform: translate3d(-8%, 10%, 0) scale(1.1); }
+    100% { transform: translate3d(-2%, -6%, 0) scale(1); }
+}
+
+/* ---------------- ANIMATED DOODLE (decorative) ------------------------
+ * Sits ABOVE the aurora (z-index 0 vs -1) and BELOW .edp-hero-inner
+ * (z-index 1), so the two decorative layers compose instead of fighting and
+ * nothing can cover an interactive element. Never focusable, never hit-tested.
+ * -------------------------------------------------------------------- */
+.edp-doodle {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.edp-doodle-svg {
+    position: absolute;
+    right: -1%;
+    bottom: -3%;
+    width: 46%;
+    max-width: 460px;
+    height: auto;
+    opacity: 0.62;
+    pointer-events: none;
+}
+
+/* Line work: loose hand-drawn feel — light weight, round caps, slight
+   irregularity comes from the bezier control points in the markup. */
+.edp-doodle-line {
+    fill: none;
+    stroke: var(--edp-accent);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    /* every path carries pathLength="100", so one dash length fits all */
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: edp-doodle-draw 1500ms cubic-bezier(0.33, 0, 0.2, 1) both;
+}
+
+.edp-doodle-line--faint {
+    stroke-width: 1.1;
+    opacity: 0.55;
+}
+
+.edp-doodle-line--1  { animation-delay: 120ms; }
+.edp-doodle-line--2  { animation-delay: 320ms; }
+.edp-doodle-line--3  { animation-delay: 520ms; }
+.edp-doodle-line--4  { animation-delay: 660ms; }
+.edp-doodle-line--5  { animation-delay: 780ms; }
+.edp-doodle-line--6  { animation-delay: 900ms; }
+.edp-doodle-line--7  { animation-delay: 1020ms; }
+.edp-doodle-line--8  { animation-delay: 1140ms; }
+.edp-doodle-line--9  { animation-delay: 1260ms; }
+.edp-doodle-line--10 { animation-delay: 1340ms; }
+
+.edp-doodle-leaf {
+    fill: var(--edp-accent-soft);
+    stroke: var(--edp-accent);
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: edp-doodle-draw 1500ms cubic-bezier(0.33, 0, 0.2, 1) both,
+               edp-doodle-fade 900ms ease 700ms both;
+}
+
+.edp-doodle-dot {
+    fill: var(--edp-accent);
+    opacity: 0.55;
+}
+
+.edp-doodle-dot--sm {
+    opacity: 0.4;
+}
+
+.edp-doodle-ring {
+    fill: none;
+    stroke: var(--edp-accent);
+    stroke-width: 1.4;
+    opacity: 0.5;
+}
+
+/* Gentle, long-period drift on the accent clusters — parallax-ish depth. */
+.edp-doodle-sprig,
+.edp-doodle-float {
+    transform-box: fill-box;
+    transform-origin: center;
+    will-change: transform;
+}
+
+.edp-doodle-sprig {
+    animation: edp-doodle-sway 17s ease-in-out infinite alternate;
+}
+
+.edp-doodle-float--a {
+    animation: edp-doodle-drift-a 21s ease-in-out infinite alternate;
+}
+
+.edp-doodle-float--b {
+    animation: edp-doodle-drift-b 26s ease-in-out infinite alternate;
+}
+
+.edp-doodle-float--c {
+    animation: edp-doodle-drift-c 19s ease-in-out infinite alternate;
+}
+
+@keyframes edp-doodle-draw {
+    from { stroke-dashoffset: 100; }
+    to   { stroke-dashoffset: 0; }
+}
+
+@keyframes edp-doodle-fade {
+    from { fill-opacity: 0; }
+    to   { fill-opacity: 1; }
+}
+
+@keyframes edp-doodle-sway {
+    0%   { transform: translate3d(0, 0, 0) rotate(0deg); }
+    50%  { transform: translate3d(2px, -6px, 0) rotate(1.6deg); }
+    100% { transform: translate3d(-2px, 3px, 0) rotate(-1.2deg); }
+}
+
+@keyframes edp-doodle-drift-a {
+    0%   { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-10px, 8px, 0); }
+}
+
+@keyframes edp-doodle-drift-b {
+    0%   { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(8px, -7px, 0); }
+}
+
+@keyframes edp-doodle-drift-c {
+    0%   { transform: translate3d(0, 0, 0) rotate(0deg); }
+    100% { transform: translate3d(-5px, -5px, 0) rotate(2deg); }
+}
+
+.edp-hero-inner {
+    position: relative;
+    z-index: 1;
+}
+
+/* ---------------- COPY ------------------------------------------------ */
+.edp-hero-copy {
+    padding-right: $sp-space-6;
+}
+
+.edp-hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: $sp-space-2;
+    margin: 0 0 $sp-space-4;
+    padding: $sp-space-1 $sp-space-3;
+    border-radius: var(--edp-radius-pill);
+    background-color: var(--edp-surface-strong);
+    border: 1px solid var(--edp-hairline);
+    color: var(--edp-text-secondary);
+    font-size: $sp-text-xs;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.edp-hero-eyebrow-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--edp-accent);
+    display: inline-block;
+}
+
+.edp-hero-headline {
+    color: var(--edp-text);
+    font-size: $sp-text-2xl;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    margin: 0 0 $sp-space-4;
+    max-width: 22ch;
+}
+
+.edp-hero-sub {
+    color: var(--edp-text-secondary);
+    font-size: $sp-text-md;
+    line-height: 1.6;
+    margin: 0 0 $sp-space-6;
+    max-width: 46ch;
+}
+
+.edp-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $sp-space-3;
+}
+
+.edp-hero-cta {
+    padding: $sp-space-3 $sp-space-5;
+    font-size: $sp-text-base;
+    box-shadow: var(--edp-shadow-1);
+    transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+                box-shadow 180ms ease,
+                background-color 180ms ease;
+}
+
+.edp-hero-cta:hover,
+.edp-hero-cta:focus {
+    transform: translateY(-2px);
+    box-shadow: var(--edp-shadow-2);
+}
+
+.edp-hero-cta-icon {
+    margin-left: $sp-space-2;
+    font-size: $sp-icon-xs;
+    transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.edp-hero-cta:hover .edp-hero-cta-icon {
+    transform: translateX(3px);
+}
+
+.edp-hero-actions .btn-default {
+    padding: $sp-space-3 $sp-space-5;
+    font-size: $sp-text-base;
+}
+
+/* ---------------- CAROUSEL -------------------------------------------- */
+/* Frosted pane: heavy blur + saturation over the animated hero background,
+ * a near-opaque glass surface so the slide copy keeps 4.5:1 in both themes,
+ * a diagonal specular sheen, a sage bloom for depth and a crisp inner edge. */
+.edp-carousel {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: var(--edp-radius-lg);
+    background-color: var(--edp-glass-surface);
+    border: 1px solid var(--edp-hairline);
+    box-shadow:
+        var(--edp-shadow-3),
+        inset 0 1px 0 var(--edp-glass-highlight),
+        inset 0 0 0 1px var(--edp-glass-edge);
+    -webkit-backdrop-filter: blur(var(--edp-blur-glass)) saturate(var(--edp-glass-saturate));
+    backdrop-filter: blur(var(--edp-blur-glass)) saturate(var(--edp-glass-saturate));
+    padding: $sp-space-5;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+}
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    .edp-carousel {
+        background-color: var(--edp-surface-strong);
+    }
+}
+
+.edp-carousel-sheen {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: block;
+    pointer-events: none;
+    background-image: linear-gradient(
+        158deg,
+        var(--edp-glass-sheen) 0%,
+        var(--edp-glass-sheen-soft) 30%,
+        transparent 56%
+    );
+}
+
+.edp-carousel-bloom {
+    position: absolute;
+    top: -34%;
+    right: -20%;
+    width: 72%;
+    padding-bottom: 72%;
+    z-index: 0;
+    display: block;
+    border-radius: 50%;
+    background: var(--edp-aurora-1);
+    filter: blur(58px);
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.edp-carousel-bar,
+.edp-carousel-viewport,
+.edp-carousel-dots {
+    position: relative;
+    z-index: 1;
+}
+
+.edp-carousel-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: $sp-space-5;
+}
+
+.edp-carousel-counter {
+    padding: $sp-space-1 $sp-space-3;
+    border-radius: var(--edp-radius-pill);
+    border: 1px solid var(--edp-hairline);
+    background-color: var(--edp-surface-sunken);
+    color: var(--edp-text-secondary);
+    font-size: $sp-text-xs;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.edp-carousel-buttons {
+    display: flex;
+    gap: $sp-space-2;
+}
+
+.edp-carousel-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--edp-hairline-strong);
+    background-color: var(--edp-surface-strong);
+    color: var(--edp-accent-ink);
+    font-size: $sp-icon-xs;
+    line-height: 1;
+    box-shadow: inset 0 1px 0 var(--edp-glass-highlight);
+    transition: background-color 180ms ease,
+                border-color 180ms ease,
+                box-shadow 180ms ease,
+                transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.edp-carousel-btn:hover {
+    background-color: var(--edp-accent-soft-hover);
+    border-color: var(--edp-accent);
+    box-shadow: var(--edp-shadow-1), inset 0 1px 0 var(--edp-glass-highlight);
+    transform: translateY(-1px);
+}
+
+.edp-carousel-btn--play {
+    border-color: var(--edp-accent);
+}
+
+.edp-carousel-viewport {
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+/* Directional transition: the controller sets `is-next` / `is-prev` so the
+   new slide enters from the side the user travelled towards. */
+.edp-carousel-slide {
+    animation: edp-slide-in-next 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.edp-carousel-slide.is-prev {
+    animation-name: edp-slide-in-prev;
+}
+
+@keyframes edp-slide-in-next {
+    from { opacity: 0; transform: translate3d(22px, 6px, 0) scale(0.985); }
+    to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes edp-slide-in-prev {
+    from { opacity: 0; transform: translate3d(-22px, 6px, 0) scale(0.985); }
+    to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+.edp-carousel-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--edp-radius);
+    background-image: linear-gradient(
+        145deg,
+        var(--edp-accent-soft-hover) 0%,
+        var(--edp-accent-soft) 100%
+    );
+    border: 1px solid var(--edp-accent);
+    box-shadow: inset 0 1px 0 var(--edp-glass-highlight);
+    color: var(--edp-accent-ink);
+    font-size: $sp-icon-md;
+    margin-bottom: $sp-space-4;
+}
+
+.edp-carousel-title {
+    color: var(--edp-text);
+    font-size: $sp-text-lg;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    margin: 0 0 $sp-space-3;
+}
+
+.edp-carousel-text {
+    color: var(--edp-text-secondary);
+    font-size: $sp-text-base;
+    line-height: 1.6;
+    margin: 0 0 $sp-space-5;
+    max-width: 44ch;
+}
+
+.edp-carousel-link {
+    display: inline-flex;
+    align-items: center;
+    gap: $sp-space-2;
+    padding: $sp-space-2 $sp-space-4;
+    border-radius: var(--edp-radius-pill);
+    border: 1px solid var(--edp-hairline-strong);
+    background-color: var(--edp-accent-soft);
+    color: var(--edp-accent-ink);
+    font-size: $sp-text-sm;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background-color 180ms ease,
+                border-color 180ms ease,
+                transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.edp-carousel-link:hover,
+.edp-carousel-link:focus {
+    background-color: var(--edp-accent-soft-hover);
+    border-color: var(--edp-accent);
+    color: var(--edp-accent-ink);
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+
+.edp-carousel-link-icon {
+    font-size: $sp-icon-sm;
+    transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.edp-carousel-link:hover .edp-carousel-link-icon,
+.edp-carousel-link:focus .edp-carousel-link-icon {
+    transform: translateX(3px);
+}
+
+/* --- indicators: a track that fills for the current slide --- */
+.edp-carousel-dots {
+    display: flex;
+    align-items: center;
+    gap: $sp-space-2;
+    margin-top: $sp-space-5;
+    padding-top: $sp-space-4;
+    border-top: 1px solid var(--edp-hairline);
+}
+
+.edp-carousel-dot {
+    position: relative;
+    width: 28px;
+    height: 8px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    border-radius: var(--edp-radius-pill);
+    background-color: var(--edp-hairline-strong);
+    transition: width 280ms cubic-bezier(0.2, 0.8, 0.2, 1),
+                background-color 200ms ease;
+}
+
+.edp-carousel-dot-fill {
+    position: absolute;
+    inset: 0;
+    display: block;
+    border-radius: inherit;
+    background-image: linear-gradient(
+        90deg,
+        var(--edp-accent) 0%,
+        var(--edp-accent-hover) 100%
+    );
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.edp-carousel-dot:hover {
+    background-color: var(--edp-accent-soft-hover);
+}
+
+.edp-carousel-dot:hover .edp-carousel-dot-fill {
+    transform: scaleX(0.45);
+}
+
+.edp-carousel-dot.is-active {
+    width: 46px;
+    background-color: var(--edp-accent-soft-hover);
+}
+
+.edp-carousel-dot.is-active .edp-carousel-dot-fill {
+    transform: scaleX(1);
+}
+
+/* ---------------- RESPONSIVE ----------------------------------------- */
+@media (max-width: 991px) {
+    .edp-hero {
+        padding: $sp-space-6 $sp-space-5;
+    }
+
+    .edp-hero-copy {
+        padding-right: 0;
+        margin-bottom: $sp-space-6;
+    }
+
+    .edp-hero-headline {
+        font-size: $sp-text-xl;
+        max-width: none;
+    }
+
+    .edp-hero-sub {
+        max-width: none;
+    }
+
+    .edp-doodle-svg {
+        width: 58%;
+        opacity: 0.45;
+    }
+}
+
+@media (max-width: 767px) {
+    .edp-hero {
+        padding: $sp-space-5 $sp-space-4;
+        border-radius: var(--edp-radius);
+    }
+
+    .edp-hero-actions .btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    .edp-carousel {
+        padding: $sp-space-4;
+        min-height: 0;
+    }
+
+    /* Purely decorative — dropped on the smallest viewports to keep the hero
+       copy uncluttered. */
+    .edp-doodle {
+        display: none;
+    }
+}
+
+/* ---------------- REDUCED MOTION (MANDATORY) ------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    .edp-hero-blob--1,
+    .edp-hero-blob--2,
+    .edp-hero-blob--3 {
+        animation: none;
+    }
+
+    /* Doodle: NO animation at all, rendered in its final drawn state. */
+    .edp-doodle-line,
+    .edp-doodle-leaf {
+        animation: none;
+        stroke-dashoffset: 0;
+    }
+
+    .edp-doodle-leaf {
+        fill-opacity: 1;
+    }
+
+    .edp-doodle-sprig,
+    .edp-doodle-float,
+    .edp-doodle-float--a,
+    .edp-doodle-float--b,
+    .edp-doodle-float--c {
+        animation: none;
+        transform: none;
+    }
+
+    .edp-carousel-slide,
+    .edp-carousel-slide.is-prev {
+        animation: none;
+    }
+
+    .edp-hero-cta,
+    .edp-hero-cta-icon,
+    .edp-carousel-btn,
+    .edp-carousel-dot,
+    .edp-carousel-dot-fill,
+    .edp-carousel-link,
+    .edp-carousel-link-icon {
+        transition: none;
+    }
+
+    .edp-hero-cta:hover,
+    .edp-hero-cta:focus {
+        transform: none;
+    }
+
+    .edp-hero-cta:hover .edp-hero-cta-icon {
+        transform: none;
+    }
+
+    .edp-carousel-btn:hover,
+    .edp-carousel-link:hover,
+    .edp-carousel-link:focus {
+        transform: none;
+    }
+
+    .edp-carousel-link:hover .edp-carousel-link-icon,
+    .edp-carousel-link:focus .edp-carousel-link-icon {
+        transform: none;
+    }
+}
+</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description>Enterprise Digital portal hero: animated CSS aurora background, animated inline-SVG doodle, headline, CTAs and an ARIA-compliant carousel (keyboard navigable, pausable, reduced-motion aware).</description>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id>x_exls_enterpris_0_edp_hero_carousel</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+}]]></link>
+        <name>EDP Hero and Carousel</name>
+        <option_schema>[{"name":"eyebrow","label":"Eyebrow text","type":"string","section":"Presentation","default_value":"Enterprise Digital","hint":"Small uppercase label above the headline. Leave blank to hide."},{"name":"headline","label":"Headline","type":"string","section":"Presentation","default_value":"Change, governed end to end."},{"name":"subheadline","label":"Sub-headline","type":"string","section":"Presentation","default_value":"Raise a review, schedule a deployment and follow every request through to completion — from one place."},{"name":"primary_cta_label","label":"Primary button label","type":"string","section":"Presentation","default_value":"Browse the catalog"},{"name":"secondary_cta_label","label":"Secondary button label","type":"string","section":"Presentation","default_value":"My requests"},{"name":"carousel_label","label":"Carousel accessible name","type":"string","section":"Presentation","default_value":"Featured Enterprise Digital services","hint":"Used as the carousel region aria-label. Required for screen readers."},{"name":"show_doodle","label":"Show animated doodle","type":"boolean","section":"Presentation","default_value":"true","hint":"Decorative inline-SVG line-art drawn with CSS behind the hero copy. aria-hidden and never animated under prefers-reduced-motion."},{"name":"primary_cta_url","label":"Primary button URL","type":"string","section":"Data","default_value":"?id=sc_landing","hint":"Portal-relative URL, e.g. ?id=sc_landing"},{"name":"secondary_cta_url","label":"Secondary button URL","type":"string","section":"Data","default_value":"?id=requests"},{"name":"slides_json","label":"Carousel slides (JSON array)","type":"string","section":"Data","default_value":"","hint":"JSON array of {title, text, icon, ctaLabel, ctaUrl}. Blank = the three built-in change-management slides."},{"name":"autoplay","label":"Auto-rotate slides","type":"boolean","section":"Behavior","default_value":"true","hint":"Always disabled for visitors who request reduced motion, regardless of this setting."},{"name":"interval_ms","label":"Auto-rotate interval (ms)","type":"integer","section":"Behavior","default_value":7000,"hint":"Minimum 3000ms. Lower values are clamped to the 7000ms default."}]</option_schema>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[/* ==========================================================================
+ * EDP Hero + Carousel — server script
+ * ==========================================================================
+ * Widget server scripts DO use the IIFE pattern (unlike headers/footers).
+ * Scoped app: gs.info / gs.error only, new GlideDateTime(), explicit
+ * GlideRecord. No gs.print, no nowDateTime(), no implicit `current`.
+ *
+ * Every `data.*` property is initialised up front so the template can never
+ * bind to undefined.
+ * ========================================================================== */
+(function () {
+
+    /* ---- defaults ------------------------------------------------------ */
+    data.eyebrow = '';
+    data.headline = '';
+    data.subheadline = '';
+    data.primaryCtaLabel = '';
+    data.primaryCtaUrl = '';
+    data.secondaryCtaLabel = '';
+    data.secondaryCtaUrl = '';
+    data.carouselLabel = '';
+    data.slides = [];
+    data.autoplay = true;
+    data.intervalMs = 7000;
+    data.showDoodle = true;
+
+    /* ---- translated strings for the client ----------------------------- */
+    data.msg = {
+        previous: gs.getMessage('Previous slide'),
+        next: gs.getMessage('Next slide'),
+        play: gs.getMessage('Start automatic slide rotation'),
+        pause: gs.getMessage('Pause automatic slide rotation'),
+        chooseSlide: gs.getMessage('Choose a slide to display')
+    };
+
+    /* ---- options ------------------------------------------------------- */
+    data.eyebrow = options.eyebrow || gs.getMessage('Enterprise Digital');
+    data.headline = options.headline || gs.getMessage('Change, governed end to end.');
+    data.subheadline = options.subheadline || gs.getMessage(
+        'Raise a review, schedule a deployment and follow every request through to ' +
+        'completion — from one place.');
+    data.primaryCtaLabel = options.primary_cta_label || gs.getMessage('Browse the catalog');
+    data.primaryCtaUrl = options.primary_cta_url || '?id=sc_landing';
+    data.secondaryCtaLabel = options.secondary_cta_label || gs.getMessage('My requests');
+    data.secondaryCtaUrl = options.secondary_cta_url || '?id=requests';
+    data.carouselLabel = options.carousel_label || gs.getMessage('Featured Enterprise Digital services');
+
+    // Booleans arrive as the strings 'true' / 'false' when they come from
+    // widgetParameters — compare against both forms.
+    data.autoplay = options.autoplay !== false && options.autoplay !== 'false';
+
+    // Decorative animated SVG doodle in the hero. Switchable from the Service
+    // Portal Designer with no code change; it never affects behaviour or AT
+    // output because the markup is aria-hidden and pointer-events: none.
+    data.showDoodle = options.show_doodle !== false && options.show_doodle !== 'false';
+
+    var parsedInterval = parseInt(options.interval_ms, 10);
+    data.intervalMs = (!isNaN(parsedInterval) && parsedInterval >= 3000) ? parsedInterval : 7000;
+
+    /* ---- slides -------------------------------------------------------- *
+     * `slides_json` is a JSON array of:
+     *   { "title": "...", "text": "...", "icon": "<font-awesome name,
+     *     without the fa- prefix>", "ctaLabel": "...", "ctaUrl": "?id=..." }
+     * Edit it from the Service Portal Designer — no code change needed.
+     * ------------------------------------------------------------------- */
+    var FALLBACK_SLIDES = [
+        {
+            title: gs.getMessage('Change Review Board'),
+            text: gs.getMessage('Put a change in front of the board, capture the risk rating and track the decision.'),
+            icon: 'check-square-o',
+            ctaLabel: gs.getMessage('Request a review'),
+            ctaUrl: '?id=sc_cat_item&sys_id=7518ecedb14542a59ccfc62d5058a8d5'
+        },
+        {
+            title: gs.getMessage('Change Deployment'),
+            text: gs.getMessage('Book a deployment window, record the rollback plan and verify the outcome.'),
+            icon: 'rocket',
+            ctaLabel: gs.getMessage('Schedule a deployment'),
+            ctaUrl: '?id=sc_cat_item&sys_id=9639f638440e4833b8b56ec59845cec4'
+        },
+        {
+            title: gs.getMessage('One governed catalog'),
+            text: gs.getMessage('Every Enterprise Digital delivery service, in a single catalog you can search.'),
+            icon: 'th-large',
+            ctaLabel: gs.getMessage('Open the catalog'),
+            ctaUrl: '?id=sc_landing'
+        }
+    ];
+
+    data.slides = FALLBACK_SLIDES;
+
+    if (options.slides_json && (options.slides_json + '').trim() !== '') {
+        try {
+            var parsed = JSON.parse(options.slides_json + '');
+            if (parsed && parsed.length) {
+                var cleaned = [];
+                for (var i = 0; i < parsed.length; i++) {
+                    var raw = parsed[i] || {};
+                    if (!raw.title) {
+                        continue;
+                    }
+                    cleaned.push({
+                        title: raw.title + '',
+                        text: raw.text ? raw.text + '' : '',
+                        icon: raw.icon ? raw.icon + '' : 'circle-o',
+                        ctaLabel: raw.ctaLabel ? raw.ctaLabel + '' : '',
+                        ctaUrl: raw.ctaUrl ? raw.ctaUrl + '' : ''
+                    });
+                }
+                if (cleaned.length) {
+                    data.slides = cleaned;
+                }
+            }
+        } catch (parseErr) {
+            gs.error('[EDP hero] slides_json is not valid JSON, falling back to defaults: ' + parseErr);
+        }
+    }
+})();
+]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-10-14 01:32:55</sys_created_on>
+        <sys_id>e080ea32724649cca104741946ab138b</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>EDP Hero and Carousel</sys_name>
+        <sys_package display_value="Enterprise Digital" source="x_exls_enterpris_0">0f5d34e783f743108b9b98c6feaad3ee</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Enterprise Digital">0f5d34e783f743108b9b98c6feaad3ee</sys_scope>
+        <sys_update_name>sp_widget_e080ea32724649cca104741946ab138b</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-10-14 01:32:55</sys_updated_on>
+        <template><![CDATA[<!--
+  ==========================================================================
+  EDP Hero + Carousel  (x_exls_enterpris_0_edp_hero_carousel)
+  ==========================================================================
+  Left  : headline / sub-headline / CTAs   (configurable via optionSchema)
+  Right : rotating carousel                (slides configurable via
+          the `slides_json` widget option)
+
+  Decoration layers inside the hero, back to front:
+    1. .edp-hero-aurora  — animated CSS gradient mesh (kept, unchanged)
+    2. .edp-doodle       — inline SVG line-art doodle, CSS-animated
+                           (stroke-dashoffset draw-on + gentle drift).
+                           Toggled by the `show_doodle` option.
+    3. .edp-hero-inner   — all real content / interactive elements
+
+  Both decoration layers are aria-hidden, non-focusable and
+  pointer-events: none, so they can never intercept a click or be announced.
+
+  ACCESSIBILITY CONTRACT — do not weaken:
+    * region + aria-roledescription="carousel" + aria-label
+    * each slide: role="group" + aria-roledescription="slide" + "N of M" label
+    * live region politeness flips: 'off' while auto-rotating, 'polite' when
+      the user is driving (paused) — per the ARIA APG carousel pattern
+    * ArrowLeft / ArrowRight move between slides
+    * explicit play/pause button; auto-advance is also paused on hover and
+      on keyboard focus
+    * auto-advance never starts when prefers-reduced-motion: reduce
+  ==========================================================================
+-->
+<section class="edp-hero" aria-labelledby="edp-hero-heading-{{::c.uid}}">
+
+  <!-- Animated CSS gradient-mesh / aurora. Purely decorative: hidden from AT
+       and fully static under prefers-reduced-motion (see styles.scss). -->
+  <div class="edp-hero-aurora" aria-hidden="true">
+    <span class="edp-hero-blob edp-hero-blob--1"></span>
+    <span class="edp-hero-blob edp-hero-blob--2"></span>
+    <span class="edp-hero-blob edp-hero-blob--3"></span>
+    <span class="edp-hero-grain"></span>
+  </div>
+
+  <!-- ---------------- ANIMATED DOODLE (decorative) ----------------
+       Hand-drawn sage line-art. Pure inline SVG + CSS: the line work draws
+       itself with stroke-dashoffset, the sprig and the accent shapes drift.
+       No external library, no WebGL, no sp_dependency.
+       `aria-hidden` + `focusable="false"` + pointer-events: none, and it sits
+       BELOW .edp-hero-inner so it can never cover an interactive element.
+       Under prefers-reduced-motion it renders in its final drawn state. -->
+  <div class="edp-doodle" ng-if="::c.data.showDoodle" aria-hidden="true">
+    <svg class="edp-doodle-svg"
+         viewBox="0 0 420 300"
+         preserveAspectRatio="xMidYMid meet"
+         focusable="false"
+         aria-hidden="true">
+
+      <!-- loose horizon swoosh -->
+      <path class="edp-doodle-line edp-doodle-line--1" pathLength="100"
+            d="M12 236 C 70 214, 92 170, 148 178 C 204 186, 212 132, 268 140 C 318 147, 344 112, 404 96" />
+
+      <!-- second, lighter echo of the swoosh -->
+      <path class="edp-doodle-line edp-doodle-line--2 edp-doodle-line--faint" pathLength="100"
+            d="M16 256 C 78 238, 104 198, 158 204 C 212 210, 226 160, 280 166 C 330 172, 352 142, 406 126" />
+
+      <!-- hand-drawn open circle -->
+      <path class="edp-doodle-line edp-doodle-line--3" pathLength="100"
+            d="M330 54 C 356 48, 376 64, 374 86 C 372 108, 350 120, 332 112 C 314 104, 308 80, 322 64 C 328 57, 338 53, 346 54" />
+
+      <!-- drifting sprig: stem + leaves -->
+      <g class="edp-doodle-sprig">
+        <path class="edp-doodle-line edp-doodle-line--4" pathLength="100"
+              d="M74 160 C 78 128, 92 104, 116 86" />
+        <path class="edp-doodle-line edp-doodle-line--5" pathLength="100"
+              d="M80 138 C 64 130, 56 116, 58 100 C 74 102, 86 114, 88 130" />
+        <path class="edp-doodle-line edp-doodle-line--6" pathLength="100"
+              d="M92 116 C 94 98, 104 86, 120 80 C 122 96, 114 110, 100 118" />
+        <path class="edp-doodle-leaf edp-doodle-line--7" pathLength="100"
+              d="M104 96 C 112 82, 126 74, 142 74 C 140 90, 128 102, 110 104 Z" />
+      </g>
+
+      <!-- floating accent shapes -->
+      <g class="edp-doodle-float edp-doodle-float--a">
+        <circle class="edp-doodle-dot" cx="232" cy="72" r="5" />
+        <circle class="edp-doodle-ring" cx="258" cy="46" r="9" />
+      </g>
+      <g class="edp-doodle-float edp-doodle-float--b">
+        <circle class="edp-doodle-dot edp-doodle-dot--sm" cx="186" cy="110" r="3" />
+        <path class="edp-doodle-line edp-doodle-line--8" pathLength="100"
+              d="M196 238 C 214 226, 236 226, 252 238" />
+      </g>
+
+      <!-- tiny scatter marks -->
+      <g class="edp-doodle-float edp-doodle-float--c">
+        <path class="edp-doodle-line edp-doodle-line--9" pathLength="100" d="M300 206 L 312 196" />
+        <path class="edp-doodle-line edp-doodle-line--10" pathLength="100" d="M318 212 L 332 202" />
+      </g>
+    </svg>
+  </div>
+
+  <div class="edp-hero-inner">
+    <div class="row">
+
+      <!-- ---------------- COPY ---------------- -->
+      <div class="col-md-6 col-sm-12 col-xs-12 edp-hero-copy">
+        <p class="edp-hero-eyebrow" ng-if="::c.data.eyebrow">
+          <span class="edp-hero-eyebrow-dot" aria-hidden="true"></span>{{::c.data.eyebrow}}
+        </p>
+
+        <h1 class="edp-hero-headline" id="edp-hero-heading-{{::c.uid}}">{{::c.data.headline}}</h1>
+
+        <p class="edp-hero-sub" ng-if="::c.data.subheadline">{{::c.data.subheadline}}</p>
+
+        <div class="edp-hero-actions">
+          <a class="btn btn-primary edp-hero-cta edp-focusable"
+             ng-if="::c.data.primaryCtaLabel"
+             ng-href="{{::c.data.primaryCtaUrl}}">
+            {{::c.data.primaryCtaLabel}}
+            <i class="fa fa-arrow-right edp-hero-cta-icon" aria-hidden="true"></i>
+          </a>
+          <a class="btn btn-default edp-focusable"
+             ng-if="::c.data.secondaryCtaLabel"
+             ng-href="{{::c.data.secondaryCtaUrl}}">
+            {{::c.data.secondaryCtaLabel}}
+          </a>
+        </div>
+      </div>
+
+      <!-- ---------------- CAROUSEL ---------------- -->
+      <div class="col-md-6 col-sm-12 col-xs-12">
+        <div class="edp-carousel"
+             ng-if="c.slides.length"
+             role="region"
+             aria-roledescription="carousel"
+             aria-label="{{::c.data.carouselLabel}}"
+             ng-keydown="c.onKeydown($event)"
+             ng-mouseenter="c.setHover(true)"
+             ng-mouseleave="c.setHover(false)"
+             ng-focus="c.setFocus(true)"
+             ng-blur="c.setFocus(false)">
+
+          <!-- decorative glass sheen + accent bloom behind the slide copy -->
+          <span class="edp-carousel-sheen" aria-hidden="true"></span>
+          <span class="edp-carousel-bloom" aria-hidden="true"></span>
+
+          <!-- controls -->
+          <div class="edp-carousel-bar" ng-if="c.slides.length > 1">
+            <span class="edp-carousel-counter" aria-hidden="true">
+              {{c.index + 1}}&thinsp;/&thinsp;{{c.slides.length}}
+            </span>
+            <div class="edp-carousel-buttons">
+              <button type="button"
+                      class="edp-carousel-btn edp-focusable"
+                      ng-click="c.prev()"
+                      aria-controls="edp-carousel-slides-{{::c.uid}}"
+                      aria-label="{{::c.data.msg.previous}}">
+                <i class="fa fa-chevron-left" aria-hidden="true"></i>
+              </button>
+              <button type="button"
+                      class="edp-carousel-btn edp-carousel-btn--play edp-focusable"
+                      ng-if="c.autoplayAllowed"
+                      ng-click="c.togglePlay()"
+                      aria-controls="edp-carousel-slides-{{::c.uid}}"
+                      aria-label="{{c.playing ? c.data.msg.pause : c.data.msg.play}}">
+                <i class="fa" ng-class="c.playing ? 'fa-pause' : 'fa-play'" aria-hidden="true"></i>
+              </button>
+              <button type="button"
+                      class="edp-carousel-btn edp-focusable"
+                      ng-click="c.next()"
+                      aria-controls="edp-carousel-slides-{{::c.uid}}"
+                      aria-label="{{::c.data.msg.next}}">
+                <i class="fa fa-chevron-right" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- slides: politeness flips with play state (APG) -->
+          <div class="edp-carousel-viewport"
+               id="edp-carousel-slides-{{::c.uid}}"
+               aria-live="{{c.politeness}}"
+               aria-atomic="false">
+
+            <div class="edp-carousel-slide"
+                 ng-repeat="slide in c.slides track by $index"
+                 ng-if="$index === c.index"
+                 ng-class="c.direction"
+                 role="group"
+                 aria-roledescription="slide"
+                 aria-label="{{$index + 1}} / {{c.slides.length}}: {{slide.title}}">
+
+              <span class="edp-carousel-icon" aria-hidden="true">
+                <i class="fa fa-{{slide.icon}}"></i>
+              </span>
+
+              <h2 class="edp-carousel-title">{{slide.title}}</h2>
+              <p class="edp-carousel-text">{{slide.text}}</p>
+
+              <a class="edp-carousel-link edp-focusable"
+                 ng-if="slide.ctaLabel"
+                 ng-href="{{slide.ctaUrl}}">
+                {{slide.ctaLabel}}
+                <i class="fa fa-angle-right edp-carousel-link-icon" aria-hidden="true"></i>
+              </a>
+            </div>
+          </div>
+
+          <!-- slide pickers -->
+          <div class="edp-carousel-dots"
+               ng-if="c.slides.length > 1"
+               role="group"
+               aria-label="{{::c.data.msg.chooseSlide}}">
+            <button type="button"
+                    class="edp-carousel-dot edp-focusable"
+                    ng-repeat="slide in c.slides track by $index"
+                    ng-class="{'is-active': $index === c.index}"
+                    ng-click="c.goTo($index)"
+                    ng-attr-aria-current="{{$index === c.index ? 'true' : undefined}}"
+                    aria-controls="edp-carousel-slides-{{::c.uid}}"
+                    aria-label="{{slide.title}} ({{$index + 1}} / {{c.slides.length}})">
+              <span class="edp-carousel-dot-fill" aria-hidden="true"></span>
+              <span class="edp-sr-only">{{slide.title}}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+]]></template>
+    </sp_widget>
+</record_update>
