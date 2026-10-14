@@ -17,8 +17,14 @@
  *        [data-edp-theme="dark"]          -&gt; dark palette
  *      Flipping the single `data-edp-theme` attribute on &lt;html&gt; re-themes the
  *      whole portal. The Theme Toggle widget does exactly that.
- *   4. Global surface / focus / motion rules
- *   5. Catalog ordering experience theming (OOTB sc_cat_item page)
+ *   4. Global surface / focus / motion rules (+ the no-footer layout guard)
+ *   5. Catalog ordering shell (OOTB sc_cat_item) — verified selectors only
+ *   6. Reduced-motion guard for sections 4-5
+ *   7. OOTB Bootstrap + OOTB widget surfaces re-pointed at RUNTIME tokens
+ *      &lt;- this is the dark-mode fix; the root-cause note lives there
+ *   8. Catalog journey: sc_landing / sc_category / sc_cat_item / search
+ *   9. Explicit dark-scope hardening for OOTB hardcoded literals
+ *  10. Reduced-motion guard for sections 7-8
  *
  * WHY TWO TOKEN SYSTEMS?
  *   --edp-*   : plain hex custom properties. ALL of this app's own CSS uses
@@ -396,6 +402,18 @@ $sp-icon-xl: 48px !default;
     --edp-accent-ink: #4C6349;
     --edp-focus: #556E52;
 
+    /* --- semantic state colours (text-safe on the light surfaces) ---
+       Measured on #F7F3EF: danger 5.3:1 | success 5.7:1 | warning 5.8:1 |
+       info 5.2:1. The *-soft variants are tinted fills, never text. */
+    --edp-danger: #B33A3A;
+    --edp-danger-soft: rgba(179, 58, 58, 0.10);
+    --edp-success: #2F6B4F;
+    --edp-success-soft: rgba(47, 107, 79, 0.10);
+    --edp-warning: #7A5A10;
+    --edp-warning-soft: rgba(122, 90, 16, 0.10);
+    --edp-info: #2F6D8C;
+    --edp-info-soft: rgba(47, 109, 140, 0.10);
+
     /* --- effects --- */
     --edp-blur: 16px;
     --edp-blur-strong: 24px;
@@ -474,6 +492,18 @@ $sp-icon-xl: 48px !default;
     --edp-accent-ink: #BCD2B4;
     --edp-focus: #BCD2B4;
 
+    /* --- semantic state colours, lifted for dark surfaces ---
+       Measured on #1B1816: danger 8.4:1 | success 10.8:1 | warning ~9:1 |
+       info ~8.5:1. The *-soft variants are tinted fills, never text. */
+    --edp-danger: #E8A1A1;
+    --edp-danger-soft: rgba(232, 161, 161, 0.16);
+    --edp-success: #A8D5B5;
+    --edp-success-soft: rgba(168, 213, 181, 0.16);
+    --edp-warning: #E8C77A;
+    --edp-warning-soft: rgba(232, 199, 122, 0.16);
+    --edp-info: #9DC6DE;
+    --edp-info-soft: rgba(157, 198, 222, 0.16);
+
     --edp-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.32), 0 2px 8px rgba(0, 0, 0, 0.28);
     --edp-shadow-2: 0 2px 4px rgba(0, 0, 0, 0.36), 0 10px 24px rgba(0, 0, 0, 0.40);
     --edp-shadow-3: 0 4px 8px rgba(0, 0, 0, 0.40), 0 20px 48px rgba(0, 0, 0, 0.52);
@@ -513,9 +543,28 @@ $sp-icon-xl: 48px !default;
  * bare `nav {}` rules — the Service Portal framework owns header positioning.
  * -------------------------------------------------------------------------- */
 
+/* The portal no longer renders a footer (`SPTheme.footer` is unbound), so the
+ * page root has to carry the page background all the way down and fill the
+ * viewport. Without this the removed footer leaves a dead strip of the
+ * browser's default background under short pages. */
 .sp-page-root {
     background-color: var(--edp-bg);
     color: var(--edp-text);
+    min-height: 100vh;
+}
+
+/* Belt-and-braces: if the framework still emits an empty footer shell for a
+ * theme with no footer widget, collapse it so it cannot reserve space. */
+.sp-page-root &gt; footer:empty,
+body &gt; footer:empty {
+    display: none;
+}
+
+/* Breathing room where the footer used to be, so the last widget does not sit
+ * flush against the viewport edge. */
+section.page,
+main.body {
+    padding-bottom: $sp-space-7;
 }
 
 section.page,
@@ -673,13 +722,16 @@ label,
  * here, which is the supported approach.
  * -------------------------------------------------------------------------- */
 
-/* Catalog item form shell + record-producer shell */
-.sc-cat-item,
-.sc-cat-item-producer,
-.cat-item-container,
-.sc-content,
-.sc-sticky-item-header,
-.sp-form-container {
+/* Catalog item form shell — selectors VERIFIED against the live OOTB
+ * "SC Catalog Item" widget template (sp_widget 3c29786e87133200e0ef0cf888cb0bdf):
+ * the root is `#sc_cat_item`, the title block is `.item-header`, and the
+ * sticky title bar is `.sc-sticky-item-header`.
+ * (The previously used `.sc-cat-item`, `.cat-item-container`,
+ * `.sc-content`, `.sp-form-container` and `.sc-cat-item-content` selectors do
+ * NOT exist in that template and have been removed.) */
+#sc_cat_item .panel,
+#sc_cat_item .item-header,
+.sc-sticky-item-header {
     background-color: var(--edp-surface);
     border-radius: var(--edp-radius);
     color: var(--edp-text);
@@ -691,18 +743,17 @@ label,
     backdrop-filter: blur(var(--edp-blur-strong));
 }
 
-/* Variable rows inside the ordering form */
-.sc-cat-item .form-group,
-.cat-item-container .form-group,
-.sp-form-container .form-group {
+/* Variable rows inside the ordering form (`#catalog-form` is the real form id
+ * in the OOTB template). */
+#sc_cat_item .form-group,
+#catalog-form .form-group {
     margin-bottom: $sp-space-4;
 }
 
-/* Catalog item / category cards on the landing + category pages */
-.sc-cat-item-content,
-.sc-category-list .panel,
-.sc-cat-item-tile,
-.sp-quick-link {
+/* Catalog item cards on the landing page — `.item-card` / `.item-card-column`
+ * are VERIFIED against the live OOTB "Recent &amp; Popular Items" widget template
+ * (sp_widget 4fc1dd5387500300e0ef0cf888cb0baa). */
+.item-card {
     background-color: var(--edp-surface);
     border: 1px solid var(--edp-hairline);
     border-radius: var(--edp-radius);
@@ -710,17 +761,16 @@ label,
     transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
-.sc-cat-item-content:hover,
-.sc-cat-item-tile:hover,
-.sp-quick-link:hover {
+.item-card:hover {
     border-color: var(--edp-accent);
     box-shadow: var(--edp-shadow-2);
     transform: translateY(-2px);
 }
 
-/* Order / Submit action area */
-.sc-cat-item .btn-primary,
-.cat-item-container .btn-primary,
+/* Order / Submit action area. `#submit-btn`, `.sc-btn` and `.inline-cart` /
+ * `.right-side-cart` are VERIFIED against the OOTB SC Catalog Item template. */
+#sc_cat_item .btn-primary,
+#submit-btn,
 .sc-sticky-item-header .btn-primary {
     border-radius: var(--edp-radius-pill);
     padding-left: $sp-space-5;
@@ -749,20 +799,1094 @@ label,
     .btn,
     .btn-primary,
     .btn-default,
-    .sc-cat-item-content,
-    .sc-cat-item-tile,
-    .sp-quick-link {
+    .item-card,
+    .group-item,
+    .edp-sc-tile {
         transition: none;
     }
 
-    .sc-cat-item-content:hover,
-    .sc-cat-item-tile:hover,
-    .sp-quick-link:hover {
+    .item-card:hover,
+    .group-item:hover,
+    .edp-sc-tile:hover {
         transform: none;
     }
 }
+
+
+/* --------------------------------------------------------------------------
+ * 7. OOTB BOOTSTRAP + OOTB WIDGET SURFACES  (the dark-mode fix)
+ * --------------------------------------------------------------------------
+ * ROOT CAUSE of "white things are not visible in dark mode":
+ *
+ *   `sp_theme.css_variables` is compiled to CSS ONCE, server-side, per theme.
+ *   Everything that an OOTB widget stylesheet or the Bootstrap 3 layer
+ *   derives from a `$scss-variable` — directly, or through `lighten()` /
+ *   `darken()` — is therefore baked into a LITERAL hex at compile time. A
+ *   literal hex cannot change when `data-edp-theme` flips on &lt;html&gt;: only
+ *   `var(--…)` custom properties re-resolve at runtime.
+ *
+ *   Concretely, these were frozen at their LIGHT values (verified by reading
+ *   the live records):
+ *     * `$panel-bg`, `$panel-default-heading-bg`, `$well-bg`,
+ *       `$dropdown-bg`, `$modal-content-bg`, `$popover-bg`, `$table-bg-*`,
+ *       `$sp-form-field--background-color` … (section 1 of this file)
+ *     * `.list-bg-primary { background-color: lighten($panel-info-heading-bg, 6%) }`
+ *       in the OOTB "SC Categories" widget (sp_widget 4c03cba0cb11020000f8d856634c9ce1)
+ *     * `.sc-sticky-item-header { background-color: $sc-sticky-item-header-bg }`
+ *       in the OOTB "SC Catalog Item" widget (sp_widget 3c29786e87133200e0ef0cf888cb0bdf)
+ *   and these are hardcoded light literals that NO token touches:
+ *     * `.sp-tagline-color { color: #fff !important }` — on the OOTB
+ *       `sc_landing` PAGE css (sp_page 53261e3487100300e0ef0cf888cb0b7c)
+ *     * `.button-to-top { background-color: #ddd }` — OOTB "SC Scroll to top"
+ *       (sp_widget 9cfd91940b4103002600425663673a31)
+ *     * `.image-gallery { color: #CECECE }` — OOTB SC Catalog Item
+ *
+ * FIX: re-declare every surface / text / border colour of the shared
+ * Bootstrap layer and of the OOTB widgets in terms of `var(--edp-*)`, so the
+ * value is resolved by the browser AFTER the attribute flip. Nothing below
+ * uses a compile-time colour. `!important` appears exactly twice, and only
+ * where the OOTB rule it has to beat is itself `!important` (noted inline).
+ * -------------------------------------------------------------------------- */
+
+/* ---- panels (shell rules live in section 4) ---- */
+.panel-body {
+    background-color: transparent;
+    color: var(--edp-text);
+}
+
+.panel-default,
+.panel-primary,
+.panel-info,
+.panel-success,
+.panel-warning,
+.panel-danger {
+    background-color: var(--edp-surface);
+    border-color: var(--edp-hairline);
+    color: var(--edp-text);
+}
+
+.panel-default &gt; .panel-heading,
+.panel-primary &gt; .panel-heading,
+.panel-info &gt; .panel-heading,
+.panel-success &gt; .panel-heading,
+.panel-warning &gt; .panel-heading,
+.panel-danger &gt; .panel-heading {
+    background-color: var(--edp-surface-sunken);
+    border-color: var(--edp-hairline);
+    color: var(--edp-text);
+}
+
+.panel-heading h2,
+.panel-heading h3,
+.panel-heading h4,
+.panel-heading .panel-title,
+.panel-heading .panel-title &gt; a {
+    color: var(--edp-text);
+}
+
+.panel &gt; .list-group,
+.panel &gt; .panel-collapse &gt; .list-group {
+    background-color: transparent;
+}
+
+/* ---- wells ---- */
+.well,
+.well-sm,
+.well-lg {
+    background-color: var(--edp-surface-sunken);
+    border: 1px solid var(--edp-hairline);
+    border-radius: var(--edp-radius);
+    box-shadow: none;
+    color: var(--edp-text);
+}
+
+/* ---- list groups ---- */
+.list-group {
+    background-color: transparent;
+}
+
+.list-group-item {
+    background-color: var(--edp-surface);
+    border-color: var(--edp-hairline);
+    color: var(--edp-text);
+}
+
+a.list-group-item,
+button.list-group-item {
+    color: var(--edp-text);
+}
+
+a.list-group-item:hover,
+a.list-group-item:focus,
+button.list-group-item:hover,
+button.list-group-item:focus {
+    background-color: var(--edp-accent-soft);
+    color: var(--edp-text);
+}
+
+.list-group-item.active,
+.list-group-item.active:hover,
+.list-group-item.active:focus {
+    background-color: var(--edp-accent-strong);
+    border-color: var(--edp-accent-strong);
+    color: var(--edp-text-on-accent);
+}
+
+.list-group-item-heading {
+    color: var(--edp-text);
+}
+
+.list-group-item-text {
+    color: var(--edp-text-secondary);
+}
+
+/* ---- dropdown menus ---- */
+.dropdown-menu {
+    background-color: var(--edp-surface-strong);
+    border: 1px solid var(--edp-hairline);
+    border-radius: var(--edp-radius);
+    box-shadow: var(--edp-shadow-2);
+}
+
+.dropdown-menu &gt; li &gt; a {
+    color: var(--edp-text);
+}
+
+.dropdown-menu &gt; li &gt; a:hover,
+.dropdown-menu &gt; li &gt; a:focus {
+    background-color: var(--edp-accent-soft);
+    color: var(--edp-accent-ink);
+}
+
+.dropdown-menu &gt; .active &gt; a,
+.dropdown-menu &gt; .active &gt; a:hover,
+.dropdown-menu &gt; .active &gt; a:focus {
+    background-color: var(--edp-accent-strong);
+    color: var(--edp-text-on-accent);
+}
+
+.dropdown-menu .divider {
+    background-color: var(--edp-hairline);
+}
+
+.dropdown-header {
+    color: var(--edp-text-muted);
+}
+
+/* ---- modals ---- */
+.modal-content {
+    background-color: var(--edp-bg-elevated);
+    border: 1px solid var(--edp-hairline);
+    border-radius: var(--edp-radius-lg);
+    box-shadow: var(--edp-shadow-3);
+    color: var(--edp-text);
+}
+
+.modal-header,
+.modal-footer {
+    border-color: var(--edp-hairline);
+}
+
+.modal-title,
+.modal-body {
+    color: var(--edp-text);
+}
+
+.modal-backdrop,
+.modal-backdrop.in {
+    background-color: var(--edp-scrim);
+    opacity: 1;
+}
+
+.close {
+    color: var(--edp-text);
+    opacity: 0.75;
+    text-shadow: none;
+}
+
+.close:hover,
+.close:focus {
+    color: var(--edp-text);
+    opacity: 1;
+}
+
+/* ---- popovers ---- */
+.popover {
+    background-color: var(--edp-surface-strong);
+    border-color: var(--edp-hairline);
+    border-radius: var(--edp-radius);
+    box-shadow: var(--edp-shadow-2);
+    color: var(--edp-text);
+}
+
+.popover-title {
+    background-color: var(--edp-surface-sunken);
+    border-color: var(--edp-hairline);
+    color: var(--edp-text);
+}
+
+.popover-content {
+    color: var(--edp-text);
+}
+
+.popover.top &gt; .arrow:after {
+    border-top-color: var(--edp-surface-strong);
+}
+
+.popover.bottom &gt; .arrow:after {
+    border-bottom-color: var(--edp-surface-strong);
+}
+
+.popover.left &gt; .arrow:after {
+    border-left-color: var(--edp-surface-strong);
+}
+
+.popover.right &gt; .arrow:after {
+    border-right-color: var(--edp-surface-strong);
+}
+
+/* ---- tooltips (inverted on purpose, in both themes) ---- */
+.tooltip,
+.tooltip.in {
+    opacity: 1;
+}
+
+.tooltip-inner {
+    background-color: var(--edp-text);
+    color: var(--edp-bg-elevated);
+    border-radius: var(--edp-radius-sm);
+    font-size: $sp-text-xs;
+}
+
+.tooltip.top .tooltip-arrow {
+    border-top-color: var(--edp-text);
+}
+
+.tooltip.bottom .tooltip-arrow {
+    border-bottom-color: var(--edp-text);
+}
+
+.tooltip.left .tooltip-arrow {
+    border-left-color: var(--edp-text);
+}
+
+.tooltip.right .tooltip-arrow {
+    border-right-color: var(--edp-text);
+}
+
+/* ---- tables ---- */
+.table {
+    background-color: transparent;
+    color: var(--edp-text);
+}
+
+.table &gt; thead &gt; tr &gt; th {
+    background-color: var(--edp-surface-sunken);
+    border-bottom-color: var(--edp-hairline-strong);
+    color: var(--edp-text);
+}
+
+.table &gt; tbody &gt; tr &gt; td,
+.table &gt; tbody &gt; tr &gt; th,
+.table &gt; tfoot &gt; tr &gt; td,
+.table &gt; tfoot &gt; tr &gt; th {
+    border-top-color: var(--edp-hairline);
+    color: var(--edp-text);
+}
+
+.table &gt; tbody &gt; tr {
+    background-color: transparent;
+}
+
+.table-striped &gt; tbody &gt; tr:nth-of-type(odd) {
+    background-color: var(--edp-surface-sunken);
+}
+
+.table-hover &gt; tbody &gt; tr:hover {
+    background-color: var(--edp-accent-soft);
+}
+
+.table-bordered,
+.table-bordered &gt; thead &gt; tr &gt; th,
+.table-bordered &gt; tbody &gt; tr &gt; td,
+.table-bordered &gt; tbody &gt; tr &gt; th {
+    border-color: var(--edp-hairline);
+}
+
+.table caption {
+    color: var(--edp-text-secondary);
+}
+
+/* ---- form controls, selects, textareas ---- */
+select.form-control,
+textarea.form-control,
+input[type='text'],
+input[type='search'],
+input[type='email'],
+input[type='url'],
+input[type='tel'],
+input[type='number'],
+input[type='password'],
+input[type='date'],
+input[type='datetime-local'],
+select,
+textarea {
+    background-color: var(--edp-bg-elevated);
+    border: 1px solid var(--edp-hairline-strong);
+    border-radius: var(--edp-radius-sm);
+    color: var(--edp-text);
+}
+
+.form-control[disabled],
+.form-control[readonly],
+fieldset[disabled] .form-control {
+    background-color: var(--edp-surface-sunken);
+    color: var(--edp-text-muted);
+}
+
+.input-group-addon {
+    background-color: var(--edp-surface-sunken);
+    border-color: var(--edp-hairline-strong);
+    color: var(--edp-text-secondary);
+}
+
+/* Placeholder text — one rule per vendor prefix on purpose: grouping them
+   makes the whole declaration invalid in several engines. */
+.form-control::placeholder,
+input::placeholder,
+textarea::placeholder {
+    color: var(--edp-text-muted);
+    opacity: 1;
+}
+
+.form-control::-webkit-input-placeholder {
+    color: var(--edp-text-muted);
+    opacity: 1;
+}
+
+.form-control::-moz-placeholder {
+    color: var(--edp-text-muted);
+    opacity: 1;
+}
+
+.form-control:-ms-input-placeholder {
+    color: var(--edp-text-muted);
+    opacity: 1;
+}
+
+.help-block,
+.form-text {
+    color: var(--edp-text-muted);
+}
+
+.has-error .form-control {
+    border-color: var(--edp-danger);
+}
+
+.has-error .control-label,
+.has-error .help-block {
+    color: var(--edp-danger);
+}
+
+/* Select2 is what the OOTB catalog widgets actually render for &lt;select&gt;
+   (verified: `.select2-choice` / `.select2-results` / `.select2-focusser`
+   appear in the SC Catalog Item and SC Categories sources). */
+.select2-container .select2-choice,
+.select2-container .select2-choice &gt; .select2-chosen,
+.select2-drop,
+.select2-drop-active,
+.select2-results {
+    background-color: var(--edp-bg-elevated);
+    border-color: var(--edp-hairline-strong);
+    color: var(--edp-text);
+}
+
+.select2-results .select2-highlighted {
+    background-color: var(--edp-accent-soft);
+    color: var(--edp-text);
+}
+
+/* ---- breadcrumbs (verified: OOTB `breadcrumbs` widget
+       sp_widget 0fb269305b3212000d7ec7ad31f91ae2) ---- */
+.breadcrumb {
+    background-color: transparent;
+}
+
+nav.breadcrumbs .nav-pills &gt; li &gt; a {
+    color: var(--edp-accent-ink);
+}
+
+nav.breadcrumbs .nav-pills &gt; li &gt; a:hover,
+nav.breadcrumbs .nav-pills &gt; li &gt; a:focus {
+    background-color: var(--edp-accent-soft);
+    color: var(--edp-accent-ink);
+}
+
+nav.breadcrumbs .a-disabled,
+.breadcrumb &gt; .active {
+    color: var(--edp-text-muted);
+}
+
+nav.breadcrumbs .fa-chevron-right,
+.breadcrumb &gt; li + li:before {
+    color: var(--edp-text-muted);
+}
+
+/* ---- badges, labels, pagination ---- */
+.badge,
+.panel-primary .badge,
+.panel-default .badge,
+.category-list .badge {
+    background-color: var(--edp-accent-strong);
+    color: var(--edp-text-on-accent);
+}
+
+.label-default {
+    background-color: var(--edp-surface-sunken);
+    color: var(--edp-text);
+}
+
+.pagination &gt; li &gt; a,
+.pagination &gt; li &gt; span {
+    background-color: var(--edp-surface);
+    border-color: var(--edp-hairline);
+    color: var(--edp-accent-ink);
+}
+
+.pagination &gt; li &gt; a:hover,
+.pagination &gt; li &gt; a:focus {
+    background-color: var(--edp-accent-soft);
+    border-color: var(--edp-accent);
+    color: var(--edp-accent-ink);
+}
+
+.pagination &gt; .active &gt; a,
+.pagination &gt; .active &gt; span,
+.pagination &gt; .active &gt; a:hover,
+.pagination &gt; .active &gt; span:hover {
+    background-color: var(--edp-accent-strong);
+    border-color: var(--edp-accent-strong);
+    color: var(--edp-text-on-accent);
+}
+
+.pagination &gt; .disabled &gt; span,
+.pagination &gt; .disabled &gt; a {
+    background-color: var(--edp-surface-sunken);
+    border-color: var(--edp-hairline);
+    color: var(--edp-text-muted);
+}
+
+/* ---- tabs / nav ---- */
+.nav-tabs {
+    border-bottom-color: var(--edp-hairline);
+}
+
+.nav-tabs &gt; li &gt; a {
+    color: var(--edp-text-secondary);
+}
+
+.nav &gt; li &gt; a:hover,
+.nav &gt; li &gt; a:focus {
+    background-color: var(--edp-accent-soft);
+    color: var(--edp-accent-ink);
+}
+
+.nav-tabs &gt; li.active &gt; a,
+.nav-tabs &gt; li.active &gt; a:hover,
+.nav-tabs &gt; li.active &gt; a:focus {
+    background-color: var(--edp-surface);
+    border-color: var(--edp-hairline);
+    border-bottom-color: transparent;
+    color: var(--edp-accent-ink);
+}
+
+/* ---- alerts ---- */
+.alert {
+    border-radius: var(--edp-radius);
+    border-width: 1px;
+    color: var(--edp-text);
+}
+
+.alert-info,
+.alert-suggestion {
+    background-color: var(--edp-info-soft);
+    border-color: var(--edp-info);
+}
+
+.alert-success {
+    background-color: var(--edp-success-soft);
+    border-color: var(--edp-success);
+}
+
+.alert-warning {
+    background-color: var(--edp-warning-soft);
+    border-color: var(--edp-warning);
+}
+
+.alert-danger {
+    background-color: var(--edp-danger-soft);
+    border-color: var(--edp-danger);
+}
+
+.alert a,
+.alert .alert-link {
+    color: var(--edp-accent-ink);
+}
+
+/* ---- shared text / link helpers ---- */
+.text-muted,
+small.text-muted {
+    color: var(--edp-text-muted);
+}
+
+.text-primary,
+.btn-link {
+    color: var(--edp-accent-ink);
+}
+
+.btn-link:hover,
+.btn-link:focus {
+    color: var(--edp-accent-hover);
+}
+
+hr {
+    border-top-color: var(--edp-hairline);
+}
+
+code,
+pre {
+    background-color: var(--edp-surface-sunken);
+    border-color: var(--edp-hairline);
+    color: var(--edp-text);
+}
+
+/* ---- OOTB widget shells shared by My Requests / Requests &amp; Approvals /
+       Recent &amp; Popular Items / Saved Bundles (verified: `.panels-container`,
+       `.no-data-message`, `.bundles-container`, `.sc-tab-div`,
+       `div.request`, `div.approval`, `div.recent`, `div.popular`) ---- */
+.panels-container,
+.bundles-container {
+    background-color: transparent;
+    color: var(--edp-text);
+}
+
+.no-data-message {
+    color: var(--edp-text-muted);
+}
+
+div.request,
+div.approval,
+div.recent,
+div.popular {
+    color: var(--edp-text-secondary);
+}
+
+div.request.sc-tab-div,
+div.approval.sc-tab-div,
+div.recent.sc-tab-div,
+div.popular.sc-tab-div {
+    border-bottom-color: var(--edp-accent);
+    color: var(--edp-accent-ink);
+}
+
+/* ---- hardcoded light literals in OOTB CSS that no token can reach ---- */
+/* OOTB "SC Scroll to top" paints `#ddd` and marks opacity/border !important,
+   so the override has to be !important too. */
+.button-to-top {
+    background-color: var(--edp-surface-strong) !important;
+    border-color: var(--edp-hairline-strong) !important;
+    color: var(--edp-accent-ink);
+    opacity: 1 !important;
+}
+
+.image-gallery {
+    color: var(--edp-hairline-strong);
+}
+
+.image-gallery .active {
+    color: var(--edp-accent);
+}
+
+
+/* --------------------------------------------------------------------------
+ * 8. CATALOG JOURNEY  —  sc_landing / sc_category / sc_cat_item / search
+ * --------------------------------------------------------------------------
+ * Styled from the THEME only: no SPPage wrapper is created for any OOTB page.
+ *
+ * SELECTOR PROVENANCE
+ *   VERIFIED against live records (read with run_query before writing a rule):
+ *     sp_page  53261e3487100300e0ef0cf888cb0b7c  (sc_landing + its page CSS)
+ *     sp_widget e709a97287580300e0ef0cf888cb0bdd  Catalog Homepage Search
+ *     sp_widget 4fc1dd5387500300e0ef0cf888cb0baa  Recent &amp; Popular Items
+ *     sp_widget 55ccec906701220023c82e08f585ef82  SC Saved Carts
+ *     sp_widget 69deca02675003004b8d794717415a9b  Requests and Approvals
+ *     sp_widget abc50de6d702120023c84f80de61036a  link-button
+ *     sp_widget 9cfd91940b4103002600425663673a31  SC Scroll to top
+ *     sp_widget 4c03cba0cb11020000f8d856634c9ce1  SC Categories
+ *     sp_widget 0fb269305b3212000d7ec7ad31f91ae2  breadcrumbs
+ *     sp_widget 3c29786e87133200e0ef0cf888cb0bdf  SC Catalog Item
+ *   BEST EFFORT (NOT verified against a template — see the report):
+ *     the typeahead / AI-search result list selectors at the end of this
+ *     section.
+ * -------------------------------------------------------------------------- */
+
+/* ---- sc_landing: the hero search block ---------------------------------- */
+/* `#homepage-search`, `.search-bar` and `.sp-tagline-color` are verified. */
+#homepage-search {
+    padding: $sp-space-7 $sp-space-5;
+    margin-bottom: $sp-space-6;
+    border-radius: var(--edp-radius-lg);
+    border: 1px solid var(--edp-hairline);
+    background-color: var(--edp-glass-surface);
+    box-shadow: var(--edp-shadow-2);
+    -webkit-backdrop-filter: blur(var(--edp-blur-strong)) saturate(150%);
+    backdrop-filter: blur(var(--edp-blur-strong)) saturate(150%);
+}
+
+/* The sc_landing PAGE css hardcodes `.sp-tagline-color { color: #fff
+   !important }`, which is invisible on this portal's warm light surface and
+   is the single biggest reason the page "looks bad". Page CSS wins over theme
+   CSS by load order AND carries !important, so this override needs both extra
+   specificity (`body …`) and !important. This is the only other !important in
+   this file. */
+body #homepage-search .sp-tagline-color,
+body #homepage-search a.sp-tagline-color {
+    color: var(--edp-text) !important;
+}
+
+#homepage-search h2.sp-tagline-color {
+    font-size: $sp-text-2xl;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+}
+
+#homepage-search .h4.sp-tagline-color {
+    color: var(--edp-text-secondary) !important;
+    font-size: $sp-text-md;
+}
+
+#homepage-search a.sp-tagline-color {
+    color: var(--edp-accent-ink) !important;
+    font-size: $sp-text-base;
+}
+
+/* OOTB fixes `.search-bar` at 600px, which overflows small viewports. */
+#homepage-search .search-bar {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+#homepage-search .search-bar .form-control {
+    height: 44px;
+    border-radius: var(--edp-radius-pill);
+    background-color: var(--edp-bg-elevated);
+    border-color: var(--edp-hairline-strong);
+    font-size: $sp-text-base;
+}
+
+/* ---- sc_landing: link-button + recent/popular + saved bundles ---------- */
+.recent-widget .panel,
+.bundles-container {
+    border-radius: var(--edp-radius);
+}
+
+.bundle-title {
+    border-bottom: 1px solid var(--edp-hairline);
+}
+
+.bundle-title-content {
+    color: var(--edp-text);
+    font-size: $sp-text-md;
+    font-weight: 600;
+}
+
+.item-card-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.item-card .panel-body {
+    padding: $sp-space-4;
+}
+
+.catalog-item-name {
+    color: var(--edp-accent-ink);
+    font-size: $sp-text-md;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.item-card:hover .catalog-item-name {
+    text-decoration: underline;
+}
+
+.item-short-desc {
+    color: var(--edp-text-muted);
+    font-size: $sp-text-sm;
+    line-height: 1.5;
+}
+
+.item-card + .panel-footer,
+.panel-footer.b {
+    background-color: var(--edp-surface-sunken);
+    border-top: 1px solid var(--edp-hairline);
+    border-bottom-left-radius: var(--edp-radius);
+    border-bottom-right-radius: var(--edp-radius);
+    color: var(--edp-text-secondary);
+    font-size: $sp-text-sm;
+}
+
+.item-price {
+    color: var(--edp-text);
+    font-size: $sp-text-sm;
+}
+
+.item-image {
+    border-radius: var(--edp-radius-sm);
+    background-color: var(--edp-surface-strong);
+}
+
+/* ---- sc_category: the category tree ------------------------------------ */
+.category-widget {
+    background-color: var(--edp-surface);
+    border: 1px solid var(--edp-hairline);
+    border-radius: var(--edp-radius);
+    box-shadow: var(--edp-shadow-1);
+}
+
+.category-widget .panel-heading,
+.category-widget .panel-primary.panel-heading {
+    background-color: transparent;
+    border-bottom: 1px solid var(--edp-hairline);
+    color: var(--edp-text);
+}
+
+.category-list,
+.sub-category-list {
+    background-color: transparent;
+}
+
+.category-list .list-group-item {
+    background-color: transparent;
+    border: 0;
+}
+
+.group-item {
+    border-radius: var(--edp-radius-sm);
+    color: var(--edp-text);
+    transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.group-item-primary:hover,
+.group-item-primary:focus {
+    background-color: var(--edp-accent-soft);
+}
+
+.list-bg-primary,
+.list-bg-default,
+.list-bg-info,
+.list-bg-success,
+.list-bg-warning,
+.list-bg-danger {
+    background-color: var(--edp-surface-sunken);
+}
+
+.text-active {
+    color: var(--edp-accent-ink);
+    border-left-color: var(--edp-accent);
+}
+
+.collapse-icon {
+    color: var(--edp-text-muted);
+}
+
+.sc-basic-select,
+.sn-select-basic {
+    background-color: var(--edp-bg-elevated);
+    border: 1px solid var(--edp-hairline-strong);
+    border-radius: var(--edp-radius-sm);
+    color: var(--edp-text);
+    font-size: $sp-text-sm;
+}
+
+#show-more-btn {
+    color: var(--edp-accent-ink);
+    font-size: $sp-text-sm;
+    font-weight: 600;
+}
+
+/* ---- sc_cat_item: the ordering form ------------------------------------ */
+#sc_cat_item .panel {
+    border: 1px solid var(--edp-hairline);
+    box-shadow: var(--edp-shadow-1);
+}
+
+#sc_cat_item .item-header,
+.sc-sticky-item-header {
+    border-bottom: 1px solid var(--edp-hairline);
+    -webkit-backdrop-filter: blur(var(--edp-blur-strong));
+    backdrop-filter: blur(var(--edp-blur-strong));
+}
+
+#sc_cat_item .item-header h2 {
+    color: var(--edp-text);
+    font-size: $sp-text-xl;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.sc-cat-item-short-description {
+    color: var(--edp-text-muted);
+    font-size: $sp-text-base;
+}
+
+.sc-item-description {
+    color: var(--edp-text-secondary);
+    font-size: $sp-text-base;
+    line-height: 1.6;
+}
+
+.sc-cat-item-legend {
+    color: var(--edp-text-muted);
+    font-size: $sp-text-sm;
+}
+
+.mandatory,
+.sc-field-error-color {
+    color: var(--edp-danger);
+}
+
+.catalog-item-image {
+    border-radius: var(--edp-radius);
+    background-color: var(--edp-surface-strong);
+}
+
+.drag-and-drop-area {
+    background-color: var(--edp-surface-sunken);
+    border: 1px dashed var(--edp-hairline-strong);
+    border-radius: var(--edp-radius);
+    color: var(--edp-text-secondary);
+}
+
+.cat-item-quantity-label,
+#sc_cat_item label,
+#sc_cat_item .control-label {
+    color: var(--edp-text-secondary);
+}
+
+.sc-btn {
+    border-radius: var(--edp-radius-pill);
+    color: var(--edp-accent-ink);
+}
+
+.sc-field-error-label,
+.sc-reqd-info-btn {
+    background-color: var(--edp-danger-soft);
+    border: 1px solid var(--edp-danger);
+    border-radius: var(--edp-radius-pill);
+    color: var(--edp-text);
+    font-size: $sp-text-xs;
+    font-weight: 600;
+}
+
+.right-side-cart .panel,
+.inline-cart {
+    border-radius: var(--edp-radius);
+}
+
+/* ---- search / typeahead results ---------------------------------------
+ * BEST EFFORT: these class names were NOT verified against the
+ * `typeahead-search` template (that record was not read), so they are written
+ * defensively — each rule only sets colour/radius, so a miss is a no-op and
+ * cannot break the OOTB layout.
+ * -------------------------------------------------------------------- */
+.typeahead,
+.tt-menu,
+.tt-dropdown-menu,
+.sp-search-results,
+.search-results {
+    background-color: var(--edp-surface-strong);
+    border: 1px solid var(--edp-hairline);
+    border-radius: var(--edp-radius);
+    box-shadow: var(--edp-shadow-2);
+    color: var(--edp-text);
+}
+
+.tt-suggestion,
+.sp-search-result,
+.search-result-item {
+    color: var(--edp-text);
+}
+
+.tt-suggestion:hover,
+.tt-suggestion.tt-cursor,
+.sp-search-result:hover,
+.search-result-item:hover {
+    background-color: var(--edp-accent-soft);
+    color: var(--edp-text);
+}
+
+.search-list-item:focus {
+    background-color: var(--edp-accent-soft);
+}
+
+
+/* --------------------------------------------------------------------------
+ * 9. EXPLICIT DARK-SCOPE HARDENING
+ * --------------------------------------------------------------------------
+ * Everything above already flips, because it resolves `var(--edp-*)` at
+ * runtime. This block exists for the handful of OOTB surfaces whose light
+ * appearance comes from somewhere a generic token rule cannot reach (a
+ * compile-time `lighten()`, a page-level `!important`, or an &lt;img&gt; that needs
+ * a backing plate on a dark page). Keeping them here, scoped to
+ * `[data-edp-theme='dark']`, makes the dark-only intent explicit.
+ * -------------------------------------------------------------------------- */
+[data-edp-theme='dark'] {
+    /* compile-time `lighten($panel-info-heading-bg, 6%)` in SC Categories */
+    .list-bg-primary,
+    .list-bg-default,
+    .list-bg-info,
+    .list-bg-success,
+    .list-bg-warning,
+    .list-bg-danger {
+        background-color: var(--edp-surface-sunken);
+    }
+
+    /* compile-time `$sc-sticky-item-header-bg` in SC Catalog Item */
+    .sc-sticky-item-header,
+    #sc_cat_item .item-header {
+        background-color: var(--edp-bg-elevated);
+    }
+
+    /* `#fff !important` on the sc_landing page record */
+    body #homepage-search .sp-tagline-color,
+    body #homepage-search a.sp-tagline-color {
+        color: var(--edp-text) !important;
+    }
+
+    /* `#ddd` in SC Scroll to top */
+    .button-to-top {
+        background-color: var(--edp-surface-strong) !important;
+        color: var(--edp-accent-ink);
+    }
+
+    /* Catalog artwork is authored for light pages: give it a plate so a
+       transparent PNG never becomes an invisible smudge. */
+    .catalog-item-image,
+    .item-image {
+        background-color: var(--edp-surface-strong);
+    }
+
+    /* OOTB table headers inherit a frozen light tint in places. */
+    .table &gt; thead &gt; tr &gt; th {
+        background-color: var(--edp-surface-sunken);
+        color: var(--edp-text);
+    }
+}
+
+
+/* --------------------------------------------------------------------------
+ * 10. REDUCED MOTION — guard for the transitions added in sections 7-8
+ * -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    .group-item,
+    .list-group-item,
+    .pagination &gt; li &gt; a,
+    .sc-btn {
+        transition: none;
+    }
+}
+
+
+/* --------------------------------------------------------------------------
+ * 11. OOTB "My Requests" (`my-requests-v2`) + page-link safety net
+ * --------------------------------------------------------------------------
+ * Selectors VERIFIED against the live record (sp_widget
+ * 8cc0df25875023000f220cf888cb0bb5). Three things in that widget's own CSS
+ * are compile-time frozen and were unreadable in dark mode:
+ *   * `.uib-vis-tab &gt; a { color: $sp-nav-tabs-color }`      (tab labels)
+ *   * `.nav-tabs &gt; li.active &gt; a { color: $sp-nav-tabs-active-tab }`
+ *   * `.column-headers { position: sticky }` with NO background, so the
+ *     scrolling rows showed through the header row
+ * -------------------------------------------------------------------------- */
+.uib-vis-tab &gt; a {
+    color: var(--edp-text-secondary);
+}
+
+.uib-vis-tab.active &gt; a,
+.nav-tabs &gt; li.active &gt; a {
+    color: var(--edp-accent-ink);
+}
+
+.column-headers {
+    background-color: var(--edp-surface-strong);
+    color: var(--edp-text);
+}
+
+.column-headers .list-group-item {
+    background-color: transparent;
+    border-color: var(--edp-hairline);
+}
+
+.requests-header-container {
+    background-color: transparent;
+}
+
+.primary-display a {
+    color: var(--edp-accent-ink);
+    font-weight: 600;
+}
+
+.secondary-display,
+.state,
+.updated {
+    color: var(--edp-text-muted);
+    font-size: $sp-text-sm;
+}
+
+.draft-item-row,
+.draft-item-cell {
+    color: var(--edp-text);
+}
+
+.btn-show-more {
+    border-radius: var(--edp-radius-pill);
+}
+
+.btn-clear,
+.btn-remove {
+    background-color: transparent;
+    color: var(--edp-text-secondary);
+}
+
+.btn-clear:hover .btn-remove,
+.btn-clear:focus .btn-remove {
+    color: var(--edp-danger);
+}
+
+.panel-align {
+    color: var(--edp-text-muted);
+}
+
+/* Safety net for every OOTB page link: `$link-color` is a compile-time SCSS
+ * variable, so if it collapses to a literal the link colour cannot flip. This
+ * re-asserts it from a runtime token for body content only — the header/footer
+ * set their own link colours, and `.btn`s are excluded so button labels keep
+ * their on-accent colour. */
+main.body a:not(.btn),
+section.page a:not(.btn) {
+    color: var(--edp-accent-ink);
+}
+
+main.body a:not(.btn):hover,
+main.body a:not(.btn):focus,
+section.page a:not(.btn):hover,
+section.page a:not(.btn):focus {
+    color: var(--edp-accent-hover);
+}
 </css_variables>
-        <footer display_value="EDP Portal Footer">f89a5e61e2e64c189cfed92c4b3963b5</footer>
+        <footer/>
         <footer_fixed>false</footer_fixed>
         <header display_value="EDP Portal Header">44df4c7837214a738801307def2dde7b</header>
         <icon>f3000194025684ffbefdcf1f12c8fcf9</icon>

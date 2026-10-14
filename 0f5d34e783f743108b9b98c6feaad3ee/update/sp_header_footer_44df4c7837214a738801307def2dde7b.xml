@@ -144,10 +144,11 @@ api.controller = function ($rootScope, $scope, $timeout, $window, i18n, spAriaUt
  *   2. brand / logo
  *   3. nav links
  *   4. search slot
- *   5. theme toggle slot
- *   6. avatar / dropdown
- *   7. responsive media queries   &lt;- MANDATORY fallbacks, do not delete
- *   8. reduced motion + forced colors
+ *   5. quick links slot
+ *   6. theme toggle slot
+ *   7. avatar / dropdown
+ *   8. responsive media queries   &lt;- MANDATORY fallbacks, do not delete
+ *   9. reduced motion + forced colors
  *
  * Colour values come from the theme's `--edp-*` runtime tokens so the header
  * re-themes instantly when `data-edp-theme` flips on &lt;html&gt;.
@@ -303,14 +304,23 @@ header[role='banner'],
     color: var(--edp-accent-ink);
 }
 
-/* ---------------- 5. THEME TOGGLE SLOT -------------------------------- */
+/* ---------------- 5. QUICK LINKS SLOT --------------------------------- */
+/* Wrapper only — the dropdown itself is styled by the Quick Links widget's
+   own stylesheet. On tablet/phone the slot becomes a full-width block inside
+   the collapsed hamburger region, next to the nav links. */
+.edp-navbar-quicklinks {
+    display: flex;
+    align-items: center;
+}
+
+/* ---------------- 6. THEME TOGGLE SLOT -------------------------------- */
 .edp-navbar-theme {
     display: flex;
     align-items: center;
     padding: $sp-space-2 $sp-space-2;
 }
 
-/* ---------------- 6. AVATAR / DROPDOWN -------------------------------- */
+/* ---------------- 7. AVATAR / DROPDOWN -------------------------------- */
 /* No `!important` on background-color here — it would block ng-style from
    painting the avatar image. */
 .navbar-avatar {
@@ -344,7 +354,7 @@ header[role='banner'],
     background-color: transparent;
 }
 
-/* ---------------- 7. RESPONSIVE (MANDATORY FALLBACKS) ----------------- */
+/* ---------------- 8. RESPONSIVE (MANDATORY FALLBACKS) ----------------- */
 /* The `.responsive-desktop` / `.responsive-tablet` classes are applied by the
    framework/client script, but the media queries below are REQUIRED as
    fallbacks — without them the menu is hidden on desktop. */
@@ -379,6 +389,10 @@ header[role='banner'],
     }
     .edp-navbar-search {
         min-width: 0;
+        width: 100%;
+    }
+    .edp-navbar-quicklinks {
+        display: block;
         width: 100%;
     }
 }
@@ -418,9 +432,13 @@ header[role='banner'],
     .navbar-brand span {
         max-width: $sp-logo-mobile-max-width;
     }
+    .edp-navbar-quicklinks {
+        display: block;
+        width: 100%;
+    }
 }
 
-/* ---------------- 8. REDUCED MOTION + FORCED COLORS ------------------- */
+/* ---------------- 9. REDUCED MOTION + FORCED COLORS ------------------- */
 @media (prefers-reduced-motion: reduce) {
     .navbar,
     .navbar-inverse .navbar-nav &gt; li &gt; a {
@@ -476,6 +494,7 @@ data.login_page = $sp.getValue('login_page');
 data.profileBtnMsg = gs.getMessage('User options');
 data.toggleMsg = gs.getMessage('Toggle navigation');
 data.searchMsg = gs.getMessage('Search Enterprise Digital');
+data.quickLinksMsg = gs.getMessage('Quick links');
 
 /* ---- SPMenu wiring ------------------------------------------------------- *
  * The menu is NOT injected into this template directly. The platform stores
@@ -511,14 +530,19 @@ if (data.menu && data.menu.data) {
 }
 
 /* ---- Embedded widgets ---------------------------------------------------- *
- * Search  : OOTB `typeahead-search` widget, reused verbatim (no custom search
- *           widget was built — OOTB already does the job).
- * Theme   : the EDP Theme Toggle widget. Rendered here so the light/dark
- *           switch is reachable from every page of the portal.
+ * Search      : OOTB `typeahead-search` widget, reused verbatim (no custom
+ *               search widget was built — OOTB already does the job).
+ * Quick links : the EDP Quick Links widget, rendered here as a compact
+ *               disclosure dropdown. It used to be a 3-up card grid in the
+ *               home page body; it now lives in the header so the shortcuts
+ *               are reachable from every page.
+ * Theme       : the EDP Theme Toggle widget. Rendered here so the light/dark
+ *               switch is reachable from every page of the portal.
  * Each lookup is guarded so a missing widget degrades gracefully instead of
  * blanking the whole header.
  * -------------------------------------------------------------------------- */
 data.search = '';
+data.quickLinks = '';
 data.themeToggle = '';
 
 try {
@@ -528,6 +552,14 @@ try {
     }) || '';
 } catch (searchErr) {
     gs.error('[EDP header] Could not load OOTB typeahead-search widget: ' + searchErr);
+}
+
+try {
+    data.quickLinks = $sp.getWidget('x_exls_enterpris_0_edp_quick_links', {
+        heading: data.quickLinksMsg
+    }) || '';
+} catch (quickLinksErr) {
+    gs.error('[EDP header] Could not load EDP quick links widget: ' + quickLinksErr);
 }
 
 try {
@@ -573,8 +605,9 @@ try {
     2. TOGGLE     hamburger (mobile / tablet)
     3. NAV        SPMenu items          (#sp-nav-bar)
     4. SEARCH     OOTB typeahead-search widget
-    5. THEME      EDP Theme Toggle widget (light/dark)
-    6. USER       login link or avatar dropdown
+    5. QUICKLINKS EDP Quick Links widget (compact disclosure dropdown)
+    6. THEME      EDP Theme Toggle widget (light/dark)
+    7. USER       login link or avatar dropdown
   ==========================================================================
 -->
 <div>
@@ -621,7 +654,7 @@ try {
       </button>
     </div>
 
-    <!-- ============ 3 - 6. COLLAPSIBLE REGION ============ -->
+    <!-- ============ 3 - 7. COLLAPSIBLE REGION ============ -->
     <div sp-navbar-toggle=""
          class="collapse navbar-right edp-header-right"
          id="sp-nav-bar"
@@ -635,12 +668,20 @@ try {
         <sp-widget widget="::data.search"></sp-widget>
       </div>
 
-      <!-- 5. THEME — EDP Theme Toggle widget (light / dark) -->
+      <!-- 5. QUICK LINKS — EDP Quick Links widget as a compact disclosure
+           dropdown. Injected server-side with $sp.getWidget, same pattern as
+           the search and the theme toggle. Collapses into the hamburger
+           region alongside the nav on small viewports. -->
+      <div class="edp-navbar-quicklinks" ng-if="::data.quickLinks">
+        <sp-widget widget="::data.quickLinks"></sp-widget>
+      </div>
+
+      <!-- 6. THEME — EDP Theme Toggle widget (light / dark) -->
       <div class="edp-navbar-theme" ng-if="::data.themeToggle">
         <sp-widget widget="::data.themeToggle"></sp-widget>
       </div>
 
-      <!-- 6a. USER — anonymous -->
+      <!-- 7a. USER — anonymous -->
       <ul ng-if="(!user.logged_in && page.id != portal.login_page_dv && !data.hasLogin)"
           class="nav navbar-nav"
           role="presentation">
@@ -649,7 +690,7 @@ try {
         </li>
       </ul>
 
-      <!-- 6b. USER — authenticated -->
+      <!-- 7b. USER — authenticated -->
       <ul ng-if="user.logged_in" class="nav navbar-nav">
         <li ng-if="::(data.connect_support_queue_id && !isAgentChatConfigured)">
           <a href class="edp-focusable" ng-click="openPopUp()" role="button">${Live Chat}</a>

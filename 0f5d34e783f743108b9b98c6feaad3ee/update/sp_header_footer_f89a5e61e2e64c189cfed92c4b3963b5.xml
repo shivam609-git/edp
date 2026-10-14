@@ -1,14 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?><record_update table="sp_header_footer">
     <sp_header_footer action="INSERT_OR_UPDATE">
         <category>custom</category>
-        <client_script><![CDATA[/* ==========================================================================
- * Enterprise Digital Portal — FOOTER client script
- * ==========================================================================
- * Header/footer scripts use `$scope` / `data`, never the `c.` alias.
- * The footer is presentational; the only behaviour is a defensive theme
- * fallback (in case the footer renders on a page where the header did not).
- * ========================================================================== */
-api.controller = function ($scope, $window) {
+        <client_script><![CDATA[api.controller = function ($scope, $window) {
+    /* ======================================================================
+     * Enterprise Digital Portal — FOOTER client script
+     * ======================================================================
+     * NOTE: the footer is currently ORPHANED. `SPTheme.footer` was
+     * deliberately unbound, so the portal renders no footer at all. The
+     * record and these source files are intentionally kept INTACT (deleting
+     * them would propagate through generated/keys.ts and destroy installed
+     * metadata) — they are simply unreferenced and can be removed later as a
+     * deliberate act.
+     *
+     * Header/footer scripts use `$scope` / `data`, never the `c.` alias.
+     * The footer is presentational; the only behaviour is a defensive theme
+     * fallback (in case it renders on a page where the header did not).
+     *
+     * This file must BEGIN with the `api.controller` assignment — the SDK
+     * client-controller validator rejects a leading file-level comment here,
+     * so the documentation lives inside the function body.
+     * ====================================================================== */
     var THEME_ATTR = 'data-edp-theme';
     var THEME_KEY = 'edp-theme';
 

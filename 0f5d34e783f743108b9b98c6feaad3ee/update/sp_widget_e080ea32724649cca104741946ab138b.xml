@@ -5,7 +5,7 @@
  * EDP Hero + Carousel — client script
  * ==========================================================================
  * Controller alias is `c` (var c = this). No $scope manipulation beyond the
- * documented lifecycle hook.
+ * documented lifecycle hooks.
  *
  * Carousel behaviour:
  *   c.index            current slide
@@ -13,11 +13,20 @@
  *   c.autoplayAllowed  false when prefers-reduced-motion: reduce, or when
  *                      the `autoplay` option is off, or with <2 slides
  *   c.politeness       'off' while rotating, 'polite' once the user drives it
- *   c.direction        'is-next' / 'is-prev' — drives the directional CSS
- *                      slide transition only. No behavioural effect, and the
- *                      transition itself is disabled under reduced motion.
+ *   c.direction        'is-next' / 'is-prev' — set on the VIEWPORT and used
+ *                      only to pick which side the incoming slide enters
+ *                      from. Purely cosmetic, and disabled under reduced
+ *                      motion.
+ *
+ * Rendering note: all slides stay mounted (see template.html). Changing
+ * `c.index` only moves the `.is-active` class, so there is never a moment
+ * where two slides are painted at once.
+ *
+ * The prev/next arrow buttons were removed from the template. `c.prev()` and
+ * `c.next()` are kept because ArrowLeft / ArrowRight still call them — do not
+ * delete them or keyboard navigation breaks.
  * ========================================================================== */
-api.controller = function ($scope, $interval, $window, spUtil) {
+api.controller = function ($scope, $element, $interval, $window, spUtil) {
     var c = this;
 
     var KEY_LEFT = 37;
@@ -76,7 +85,7 @@ api.controller = function ($scope, $interval, $window, spUtil) {
         if (!c.slides.length) {
             return;
         }
-        // Travel direction, for the CSS transition only (purely cosmetic).
+        // Travel direction, for the CSS enter animation only (cosmetic).
         c.direction = (i < c.index) ? 'is-prev' : 'is-next';
         c.index = ((i % c.slides.length) + c.slides.length) % c.slides.length;
         c.politeness = 'polite';
@@ -128,12 +137,43 @@ api.controller = function ($scope, $interval, $window, spUtil) {
         }
     };
 
+    /* --- pause while keyboard focus is anywhere inside the carousel -----
+     * `focus`/`blur` do not bubble, so ng-focus / ng-blur on the region only
+     * fire for the region itself. focusin / focusout DO bubble, which is what
+     * actually delivers "pause on focus" when the user tabs onto a dot or the
+     * play button.
+     * ------------------------------------------------------------------- */
+    var region = $element[0].querySelector('.edp-carousel');
+
+    function onFocusIn() {
+        $scope.$applyAsync(function () {
+            c.setFocus(true);
+        });
+    }
+
+    function onFocusOut() {
+        $scope.$applyAsync(function () {
+            c.setFocus(false);
+        });
+    }
+
+    if (region) {
+        region.addEventListener('focusin', onFocusIn);
+        region.addEventListener('focusout', onFocusOut);
+    }
+
     /* --- lifecycle ------------------------------------------------------ */
     startTimer();
 
-    // $scope is injected ONLY for the destroy hook — all data access stays on
-    // the `c` controller alias.
-    $scope.$on('$destroy', stopTimer);
+    // $scope is injected for the destroy hook and the focus digests only —
+    // all data access stays on the `c` controller alias.
+    $scope.$on('$destroy', function () {
+        stopTimer();
+        if (region) {
+            region.removeEventListener('focusin', onFocusIn);
+            region.removeEventListener('focusout', onFocusOut);
+        }
+    });
 };
 ]]></client_script>
         <controller_as>c</controller_as>
@@ -141,15 +181,22 @@ api.controller = function ($scope, $interval, $window, spUtil) {
  * EDP Hero + Carousel — styles
  * ==========================================================================
  * Premium feel, CSS only. No three.js / WebGL / external library of any kind.
- *   * animated CSS gradient-mesh ("aurora") background                (kept)
- *   * animated inline-SVG line-art doodle, drawn with stroke-dashoffset (new)
+ *   * CSS gradient-mesh ("aurora") background that DRIFTS IN ONCE and settles
+ *   * animated inline-SVG line-art doodle, drawn with stroke-dashoffset, that
+ *     settles to a static resting state after the draw-on completes
  *   * frosted-glass carousel pane with layered translucency + depth
- *   * refined directional slide transitions, indicators and controls
+ *   * single-visible, directional slide transition (never double-rendered)
  *   * tasteful micro-interactions on the CTA and carousel controls
  *
- * ALL continuous animation is wrapped in the prefers-reduced-motion guard at
- * the bottom of this file and disabled there. The doodle additionally renders
- * in its FINAL drawn state (stroke-dashoffset: 0) under reduced motion.
+ * MOTION POLICY (important — this is what keeps the page reachable by
+ * automated UI diagnostics and keeps it calm for users):
+ *   * NOTHING animates forever in the steady state. Every entrance animation
+ *     is finite (`both` / 1 iteration) and ends on a static frame, so the
+ *     browser reaches an idle state shortly after load.
+ *   * Ambient looping motion only resumes while the hero is HOVERED, and is
+ *     disabled entirely under prefers-reduced-motion.
+ *   * Under prefers-reduced-motion the doodle renders in its FINAL drawn
+ *     state (stroke-dashoffset: 0) with no animation at all.
  * ========================================================================== */
 
 /* ---------------- HERO SHELL ------------------------------------------ */
@@ -165,7 +212,7 @@ api.controller = function ($scope, $interval, $window, spUtil) {
     isolation: isolate;
 }
 
-/* --- animated gradient mesh / aurora --- */
+/* --- gradient mesh / aurora --- */
 .edp-hero-aurora {
     position: absolute;
     inset: 0;
@@ -183,16 +230,17 @@ api.controller = function ($scope, $interval, $window, spUtil) {
     border-radius: 50%;
     filter: blur(60px);
     opacity: 0.9;
-    will-change: transform;
 }
 
+/* Each blob eases in from an offset position to its RESTING transform and
+   then stops (`both` + single iteration). No `infinite` anywhere. */
 .edp-hero-blob--1 {
     width: 46%;
     padding-bottom: 46%;
     top: -14%;
     left: -8%;
     background: var(--edp-aurora-1);
-    animation: edp-drift-a 26s ease-in-out infinite alternate;
+    animation: edp-settle-a 7s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
 .edp-hero-blob--2 {
@@ -201,7 +249,7 @@ api.controller = function ($scope, $interval, $window, spUtil) {
     bottom: -18%;
     left: 28%;
     background: var(--edp-aurora-2);
-    animation: edp-drift-b 32s ease-in-out infinite alternate;
+    animation: edp-settle-b 8s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
 .edp-hero-blob--3 {
@@ -210,6 +258,20 @@ api.controller = function ($scope, $interval, $window, spUtil) {
     top: 6%;
     right: -10%;
     background: var(--edp-aurora-3);
+    animation: edp-settle-c 9s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+/* Ambient drift is OPT-IN: it only runs while the hero is hovered, so the
+   steady state of the page stays completely static. */
+.edp-hero:hover .edp-hero-blob--1 {
+    animation: edp-drift-a 26s ease-in-out infinite alternate;
+}
+
+.edp-hero:hover .edp-hero-blob--2 {
+    animation: edp-drift-b 32s ease-in-out infinite alternate;
+}
+
+.edp-hero:hover .edp-hero-blob--3 {
     animation: edp-drift-c 29s ease-in-out infinite alternate;
 }
 
@@ -228,6 +290,23 @@ api.controller = function ($scope, $interval, $window, spUtil) {
     pointer-events: none;
 }
 
+/* One-shot settle keyframes: end frame == resting frame. */
+@keyframes edp-settle-a {
+    from { transform: translate3d(6%, 5%, 0) scale(1.06); }
+    to   { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes edp-settle-b {
+    from { transform: translate3d(-7%, -6%, 0) scale(0.95); }
+    to   { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes edp-settle-c {
+    from { transform: translate3d(-6%, 7%, 0) scale(1.07); }
+    to   { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* Hover-only ambient loops. */
 @keyframes edp-drift-a {
     0%   { transform: translate3d(0, 0, 0) scale(1); }
     50%  { transform: translate3d(8%, 6%, 0) scale(1.08); }
@@ -329,27 +408,45 @@ api.controller = function ($scope, $interval, $window, spUtil) {
     opacity: 0.5;
 }
 
-/* Gentle, long-period drift on the accent clusters — parallax-ish depth. */
+/* The sprig and the accent clusters do ONE settle pass that starts as the
+   draw-on finishes and ends on `transform: none` — the resting state. They
+   are then completely static until the hero is hovered. */
 .edp-doodle-sprig,
 .edp-doodle-float {
     transform-box: fill-box;
     transform-origin: center;
-    will-change: transform;
 }
 
 .edp-doodle-sprig {
-    animation: edp-doodle-sway 17s ease-in-out infinite alternate;
+    animation: edp-doodle-settle-sway 2600ms cubic-bezier(0.22, 0.61, 0.36, 1) 1100ms both;
 }
 
 .edp-doodle-float--a {
-    animation: edp-doodle-drift-a 21s ease-in-out infinite alternate;
+    animation: edp-doodle-settle-a 2400ms cubic-bezier(0.22, 0.61, 0.36, 1) 1200ms both;
 }
 
 .edp-doodle-float--b {
-    animation: edp-doodle-drift-b 26s ease-in-out infinite alternate;
+    animation: edp-doodle-settle-b 2400ms cubic-bezier(0.22, 0.61, 0.36, 1) 1350ms both;
 }
 
 .edp-doodle-float--c {
+    animation: edp-doodle-settle-c 2400ms cubic-bezier(0.22, 0.61, 0.36, 1) 1500ms both;
+}
+
+/* Ambient sway/drift resumes on hover only. */
+.edp-hero:hover .edp-doodle-sprig {
+    animation: edp-doodle-sway 17s ease-in-out infinite alternate;
+}
+
+.edp-hero:hover .edp-doodle-float--a {
+    animation: edp-doodle-drift-a 21s ease-in-out infinite alternate;
+}
+
+.edp-hero:hover .edp-doodle-float--b {
+    animation: edp-doodle-drift-b 26s ease-in-out infinite alternate;
+}
+
+.edp-hero:hover .edp-doodle-float--c {
     animation: edp-doodle-drift-c 19s ease-in-out infinite alternate;
 }
 
@@ -363,6 +460,29 @@ api.controller = function ($scope, $interval, $window, spUtil) {
     to   { fill-opacity: 1; }
 }
 
+/* One-shot settles — all end on the static resting frame. */
+@keyframes edp-doodle-settle-sway {
+    0%   { transform: translate3d(0, -6px, 0) rotate(1.6deg); }
+    60%  { transform: translate3d(0, 2px, 0) rotate(-0.5deg); }
+    100% { transform: none; }
+}
+
+@keyframes edp-doodle-settle-a {
+    0%   { transform: translate3d(-10px, 8px, 0); }
+    100% { transform: none; }
+}
+
+@keyframes edp-doodle-settle-b {
+    0%   { transform: translate3d(8px, -7px, 0); }
+    100% { transform: none; }
+}
+
+@keyframes edp-doodle-settle-c {
+    0%   { transform: translate3d(-5px, -5px, 0) rotate(2deg); }
+    100% { transform: none; }
+}
+
+/* Hover-only ambient loops. */
 @keyframes edp-doodle-sway {
     0%   { transform: translate3d(0, 0, 0) rotate(0deg); }
     50%  { transform: translate3d(2px, -6px, 0) rotate(1.6deg); }
@@ -473,8 +593,8 @@ api.controller = function ($scope, $interval, $window, spUtil) {
 }
 
 /* ---------------- CAROUSEL -------------------------------------------- */
-/* Frosted pane: heavy blur + saturation over the animated hero background,
- * a near-opaque glass surface so the slide copy keeps 4.5:1 in both themes,
+/* Frosted pane: heavy blur + saturation over the hero background, a
+ * near-opaque glass surface so the slide copy keeps 4.5:1 in both themes,
  * a diagonal specular sheen, a sage bloom for depth and a crisp inner edge. */
 .edp-carousel {
     position: relative;
@@ -560,6 +680,8 @@ api.controller = function ($scope, $interval, $window, spUtil) {
     gap: $sp-space-2;
 }
 
+/* Only the play/pause control remains in the bar — the prev/next arrows were
+   removed. Slide selection lives on the dots and on the arrow keys. */
 .edp-carousel-btn {
     width: 36px;
     height: 36px;
@@ -588,18 +710,60 @@ api.controller = function ($scope, $interval, $window, spUtil) {
     border-color: var(--edp-accent);
 }
 
+/* ---------------- SLIDE TRACK -----------------------------------------
+ * EVERY slide stays mounted and they all share ONE grid cell, so:
+ *   * the track height is the height of the TALLEST slide and never
+ *     collapses or jumps when the active slide changes;
+ *   * swapping slides is a class change, not a DOM insert/remove, so
+ *     ngAnimate never keeps an outgoing node alive next to the incoming one
+ *     (that overlap was the "two slides visible at once" bug);
+ *   * exactly one slide is painted: the inactive ones are
+ *     `visibility: hidden` (which also drops their links out of the tab
+ *     order) and get no leave animation, so they disappear in the same frame
+ *     the incoming slide starts drawing.
+ * -------------------------------------------------------------------- */
 .edp-carousel-viewport {
     flex: 1 1 auto;
+    display: grid;
+    grid-template-areas: 'edp-slide';
     overflow: hidden;
 }
 
-/* Directional transition: the controller sets `is-next` / `is-prev` so the
-   new slide enters from the side the user travelled towards. */
 .edp-carousel-slide {
+    grid-area: edp-slide;
+    min-width: 0;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Fallback for engines without CSS grid: stack absolutely and reserve height. */
+@supports not (display: grid) {
+    .edp-carousel-viewport {
+        position: relative;
+        min-height: 220px;
+    }
+
+    .edp-carousel-slide {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+    }
+}
+
+.edp-carousel-slide.is-active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    /* Re-applied every time the class lands on a new node, so the incoming
+       slide always animates in. The outgoing slide has no animation at all. */
     animation: edp-slide-in-next 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
-.edp-carousel-slide.is-prev {
+/* Directional entrance: the controller puts `is-prev` / `is-next` on the
+   viewport, so the new slide enters from the side the user travelled towards. */
+.edp-carousel-viewport.is-prev .edp-carousel-slide.is-active {
     animation-name: edp-slide-in-prev;
 }
 
@@ -789,12 +953,19 @@ api.controller = function ($scope, $interval, $window, spUtil) {
     }
 }
 
-/* ---------------- REDUCED MOTION (MANDATORY) ------------------------- */
+/* ---------------- REDUCED MOTION (MANDATORY) -------------------------
+ * Kills BOTH the one-shot settle animations and the hover-only ambient
+ * loops, and renders the doodle in its final drawn state.
+ * ------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
     .edp-hero-blob--1,
     .edp-hero-blob--2,
-    .edp-hero-blob--3 {
+    .edp-hero-blob--3,
+    .edp-hero:hover .edp-hero-blob--1,
+    .edp-hero:hover .edp-hero-blob--2,
+    .edp-hero:hover .edp-hero-blob--3 {
         animation: none;
+        transform: none;
     }
 
     /* Doodle: NO animation at all, rendered in its final drawn state. */
@@ -812,13 +983,18 @@ api.controller = function ($scope, $interval, $window, spUtil) {
     .edp-doodle-float,
     .edp-doodle-float--a,
     .edp-doodle-float--b,
-    .edp-doodle-float--c {
+    .edp-doodle-float--c,
+    .edp-hero:hover .edp-doodle-sprig,
+    .edp-hero:hover .edp-doodle-float--a,
+    .edp-hero:hover .edp-doodle-float--b,
+    .edp-hero:hover .edp-doodle-float--c {
         animation: none;
         transform: none;
     }
 
-    .edp-carousel-slide,
-    .edp-carousel-slide.is-prev {
+    /* Slides swap instantly; still exactly one visible. */
+    .edp-carousel-slide.is-active,
+    .edp-carousel-viewport.is-prev .edp-carousel-slide.is-active {
         animation: none;
     }
 
@@ -1008,30 +1184,47 @@ api.controller = function ($scope, $interval, $window, spUtil) {
           the `slides_json` widget option)
 
   Decoration layers inside the hero, back to front:
-    1. .edp-hero-aurora  — animated CSS gradient mesh (kept, unchanged)
-    2. .edp-doodle       — inline SVG line-art doodle, CSS-animated
-                           (stroke-dashoffset draw-on + gentle drift).
+    1. .edp-hero-aurora  — CSS gradient mesh. Drifts in once on load, then
+                           SETTLES to a static resting state (see styles.scss)
+    2. .edp-doodle       — inline SVG line-art doodle: stroke-dashoffset
+                           draw-on, then a single settle pass, then STATIC.
                            Toggled by the `show_doodle` option.
     3. .edp-hero-inner   — all real content / interactive elements
 
   Both decoration layers are aria-hidden, non-focusable and
   pointer-events: none, so they can never intercept a click or be announced.
 
+  CAROUSEL RENDERING CONTRACT — read before editing:
+    * ALL slides stay in the DOM; the active one is marked `.is-active`.
+      They are stacked in ONE css-grid cell, so the track height is the
+      height of the tallest slide and never collapses between swaps.
+    * MUST NOT reintroduce `ng-if="$index === c.index"` on a slide: ngAnimate
+      then keeps the outgoing node alive for the duration of its CSS
+      animation while the incoming node is already painted — that is exactly
+      the "two slides at once" defect this markup fixes.
+    * Only `.is-active` is visible (opacity 1 / visibility visible); every
+      other slide is `visibility: hidden`, which also removes its links from
+      the tab order.
+
   ACCESSIBILITY CONTRACT — do not weaken:
     * region + aria-roledescription="carousel" + aria-label
-    * each slide: role="group" + aria-roledescription="slide" + "N of M" label
+    * each slide: role="group" + aria-roledescription="slide" + "N of M"
+      label; inactive slides are aria-hidden
     * live region politeness flips: 'off' while auto-rotating, 'polite' when
       the user is driving (paused) — per the ARIA APG carousel pattern
-    * ArrowLeft / ArrowRight move between slides
-    * explicit play/pause button; auto-advance is also paused on hover and
-      on keyboard focus
+    * ArrowLeft / ArrowRight / Home / End move between slides
+    * explicit play/pause button (the APG pause mechanism); auto-advance is
+      also paused on hover and on keyboard focus (focusin/focusout)
+    * the indicator dots are real <button>s with aria-current and accessible
+      labels — after the removal of the prev/next arrows they are the visible,
+      clickable way to reach a specific slide
     * auto-advance never starts when prefers-reduced-motion: reduce
   ==========================================================================
 -->
 <section class="edp-hero" aria-labelledby="edp-hero-heading-{{::c.uid}}">
 
-  <!-- Animated CSS gradient-mesh / aurora. Purely decorative: hidden from AT
-       and fully static under prefers-reduced-motion (see styles.scss). -->
+  <!-- CSS gradient-mesh / aurora. Purely decorative: hidden from AT, settles
+       to a static state after load and fully static under reduced motion. -->
   <div class="edp-hero-aurora" aria-hidden="true">
     <span class="edp-hero-blob edp-hero-blob--1"></span>
     <span class="edp-hero-blob edp-hero-blob--2"></span>
@@ -1041,8 +1234,9 @@ api.controller = function ($scope, $interval, $window, spUtil) {
 
   <!-- ---------------- ANIMATED DOODLE (decorative) ----------------
        Hand-drawn sage line-art. Pure inline SVG + CSS: the line work draws
-       itself with stroke-dashoffset, the sprig and the accent shapes drift.
-       No external library, no WebGL, no sp_dependency.
+       itself with stroke-dashoffset, then the sprig and the accent clusters
+       do ONE short settle pass and come to rest. No infinite loop, so the
+       page reaches an idle state (required by automated UI diagnostics).
        `aria-hidden` + `focusable="false"` + pointer-events: none, and it sits
        BELOW .edp-hero-inner so it can never cover an interactive element.
        Under prefers-reduced-motion it renders in its final drawn state. -->
@@ -1065,7 +1259,7 @@ api.controller = function ($scope, $interval, $window, spUtil) {
       <path class="edp-doodle-line edp-doodle-line--3" pathLength="100"
             d="M330 54 C 356 48, 376 64, 374 86 C 372 108, 350 120, 332 112 C 314 104, 308 80, 322 64 C 328 57, 338 53, 346 54" />
 
-      <!-- drifting sprig: stem + leaves -->
+      <!-- sprig: stem + leaves -->
       <g class="edp-doodle-sprig">
         <path class="edp-doodle-line edp-doodle-line--4" pathLength="100"
               d="M74 160 C 78 128, 92 104, 116 86" />
@@ -1077,7 +1271,7 @@ api.controller = function ($scope, $interval, $window, spUtil) {
               d="M104 96 C 112 82, 126 74, 142 74 C 140 90, 128 102, 110 104 Z" />
       </g>
 
-      <!-- floating accent shapes -->
+      <!-- accent shapes -->
       <g class="edp-doodle-float edp-doodle-float--a">
         <circle class="edp-doodle-dot" cx="232" cy="72" r="5" />
         <circle class="edp-doodle-ring" cx="258" cy="46" r="9" />
@@ -1141,19 +1335,15 @@ api.controller = function ($scope, $interval, $window, spUtil) {
           <span class="edp-carousel-sheen" aria-hidden="true"></span>
           <span class="edp-carousel-bloom" aria-hidden="true"></span>
 
-          <!-- controls -->
+          <!-- controls: counter + the APG-mandated play/pause button.
+               The prev/next arrow buttons were deliberately removed; slide
+               navigation lives on the indicator dots (pointer) and on
+               ArrowLeft / ArrowRight / Home / End (keyboard). -->
           <div class="edp-carousel-bar" ng-if="c.slides.length > 1">
             <span class="edp-carousel-counter" aria-hidden="true">
               {{c.index + 1}}&thinsp;/&thinsp;{{c.slides.length}}
             </span>
             <div class="edp-carousel-buttons">
-              <button type="button"
-                      class="edp-carousel-btn edp-focusable"
-                      ng-click="c.prev()"
-                      aria-controls="edp-carousel-slides-{{::c.uid}}"
-                      aria-label="{{::c.data.msg.previous}}">
-                <i class="fa fa-chevron-left" aria-hidden="true"></i>
-              </button>
               <button type="button"
                       class="edp-carousel-btn edp-carousel-btn--play edp-focusable"
                       ng-if="c.autoplayAllowed"
@@ -1162,28 +1352,23 @@ api.controller = function ($scope, $interval, $window, spUtil) {
                       aria-label="{{c.playing ? c.data.msg.pause : c.data.msg.play}}">
                 <i class="fa" ng-class="c.playing ? 'fa-pause' : 'fa-play'" aria-hidden="true"></i>
               </button>
-              <button type="button"
-                      class="edp-carousel-btn edp-focusable"
-                      ng-click="c.next()"
-                      aria-controls="edp-carousel-slides-{{::c.uid}}"
-                      aria-label="{{::c.data.msg.next}}">
-                <i class="fa fa-chevron-right" aria-hidden="true"></i>
-              </button>
             </div>
           </div>
 
-          <!-- slides: politeness flips with play state (APG) -->
+          <!-- slides: every slide stays mounted and stacked in one grid cell;
+               only `.is-active` is painted. Politeness flips with play state. -->
           <div class="edp-carousel-viewport"
                id="edp-carousel-slides-{{::c.uid}}"
+               ng-class="c.direction"
                aria-live="{{c.politeness}}"
                aria-atomic="false">
 
             <div class="edp-carousel-slide"
                  ng-repeat="slide in c.slides track by $index"
-                 ng-if="$index === c.index"
-                 ng-class="c.direction"
+                 ng-class="{'is-active': $index === c.index}"
                  role="group"
                  aria-roledescription="slide"
+                 aria-hidden="{{$index !== c.index}}"
                  aria-label="{{$index + 1}} / {{c.slides.length}}: {{slide.title}}">
 
               <span class="edp-carousel-icon" aria-hidden="true">
@@ -1202,7 +1387,7 @@ api.controller = function ($scope, $interval, $window, spUtil) {
             </div>
           </div>
 
-          <!-- slide pickers -->
+          <!-- slide pickers — the visible way to reach a specific slide -->
           <div class="edp-carousel-dots"
                ng-if="c.slides.length > 1"
                role="group"

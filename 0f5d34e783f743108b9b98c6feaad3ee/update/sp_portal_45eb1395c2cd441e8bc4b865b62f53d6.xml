@@ -41,7 +41,7 @@
         <sys_update_name>sp_portal_45eb1395c2cd441e8bc4b865b62f53d6</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
         <sys_updated_on>2026-10-14 01:32:52</sys_updated_on>
-        <theme display_value="EDP Rose Cotton">69aaf9db2f69437f883e1eaadd1714a7</theme>
+        <theme display_value="EDP Sage">69aaf9db2f69437f883e1eaadd1714a7</theme>
         <title>Enterprise Digital</title>
         <ts_index_group/>
         <url_suffix>edp</url_suffix>
@@ -60,22 +60,22 @@
         <size_compressed>608</size_compressed>
         <state/>
         <sys_created_by>admin</sys_created_by>
-        <sys_created_on>2026-10-14 01:56:16</sys_created_on>
+        <sys_created_on>2026-10-14 02:33:14</sys_created_on>
         <sys_id>5593e1f49f215a809dd40c4f1d93da10</sys_id>
         <sys_mod_count>0</sys_mod_count>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-10-14 01:56:16</sys_updated_on>
+        <sys_updated_on>2026-10-14 02:33:14</sys_updated_on>
         <table_name>ZZ_YYsp_portal</table_name>
         <table_sys_id>45eb1395c2cd441e8bc4b865b62f53d6</table_sys_id>
     </sys_attachment>
     <sys_attachment_doc action="INSERT_OR_UPDATE">
-        <data>H4sIAC3hzmoAAw==</data>
+        <data>H4sIANbpzmoAAw==</data>
         <length>16</length>
         <position>0</position>
         <sys_attachment display_value="logo" sys_id="5593e1f49f215a809dd40c4f1d93da10">5593e1f49f215a809dd40c4f1d93da10</sys_attachment>
         <sys_created_by>admin</sys_created_by>
-        <sys_created_on>2026-10-14 01:56:16</sys_created_on>
-        <sys_id>f1d586dfd176b8d6e957553d0102bfa1</sys_id>
+        <sys_created_on>2026-10-14 02:33:14</sys_created_on>
+        <sys_id>02297e5c14938034d2f469f26eee54fe</sys_id>
     </sys_attachment_doc>
     <sys_attachment_doc action="INSERT_OR_UPDATE">
         <data>rVTBbtswDL33Kzjl0gK1HdtpmwV2gKRJ2gIbdliBnTWbtoXJUiApcbavH5XYXdv1MAw9SaSeqcf3KGd2X8OhlcrmrHFuO4uiruvCLg21qaNkPB5HhGDQidI1OYunUwYNirpxOZtMGOwFdkt9yNkYxkCn4JNGS8yZaOk7bgQPJP+OMmdr5dBsjbAIK1ELxyWbnwFkTjiJ879Ps+h04jElVtZvaCuFQm7uDC8FKgeizBmW26+8xiHH4BATIwY/T8shIeYUHZdTFapjnd6CriqL1AuhfBwUWmqTs9H1erq8XrLobTQVe4FOF5PbdDqgs+glxWMD0dBB9iEIwLMFtl4xaLXSteEtOCERguAIMVg4IFETIp2z6yf5U0oM6vu9IUxM1CshSd+dkeejV1JcnEhlDg/HijH5RyUTWnwq4KpofAutKEuJVEkrF1S8FZJQ9yj36ETBL2FBPspLsFzZwKIRVQ+14hdZHZPpx7Dryd2MiZVER5YGdssLoWrSOLwaqI42m83tZsHm6xW5TESelPmmTdly82MGRInuI516M0JYKMhoquZQcKW0A4OcdHIaSu54QJ0HrsEWiabubQPXCAuWridx91zuENqddVBI8gfmeTqLQStYfnm8J2F5iQbszlS8QBvCZ+QUYDkbiqXhzQlP14D0nQ4fnY82a9/QBXBVwiQc/8GV1EwPG+qcj5KPyVUSX4SD4YM9/vV4e2jA/tOJ9N+coOHpnegn/dn7e+bIK16pN/B9eE3e4hWHfpBe8lo93D08Lj4NpDL/P5qf/QYfi5LPuAQAAA==</data>
@@ -83,7 +83,7 @@
         <position>1</position>
         <sys_attachment display_value="logo" sys_id="5593e1f49f215a809dd40c4f1d93da10">5593e1f49f215a809dd40c4f1d93da10</sys_attachment>
         <sys_created_by>admin</sys_created_by>
-        <sys_created_on>2026-10-14 01:56:16</sys_created_on>
+        <sys_created_on>2026-10-14 02:33:14</sys_created_on>
         <sys_id>638dce71f792afbae16af6629e481831</sys_id>
     </sys_attachment_doc>
 </record_update>
