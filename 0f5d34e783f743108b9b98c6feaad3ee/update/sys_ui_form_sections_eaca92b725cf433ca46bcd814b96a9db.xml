@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update>
+    <sys_ui_form_sections form_id="eaca92b725cf433ca46bcd814b96a9db" sys_domain="global" table="x_exls_enterpris_0_crd" version="3">
+        <sys_ui_form_section action="INSERT_OR_UPDATE">
+            <position>0</position>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 02:35:43</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_id>7c81e084a6764f2282d5079d99c358ba</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_overrides/>
+            <sys_ui_form display_value="x_exls_enterpris_0_crd" name="x_exls_enterpris_0_crd" sys_domain="global" view="Default view">eaca92b725cf433ca46bcd814b96a9db</sys_ui_form>
+            <sys_ui_section caption="Change Request Deployment" display_value="Change Request Deployment" name="x_exls_enterpris_0_crd" sys_domain="global" view="Default view">002a4517116e42ddb3e12a3c471e19ff</sys_ui_section>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 02:35:43</sys_updated_on>
+        </sys_ui_form_section>
+        <sys_ui_form action="INSERT_OR_UPDATE">
+            <name>x_exls_enterpris_0_crd</name>
+            <roles/>
+            <sys_class_name>sys_ui_form</sys_class_name>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 01:33:05</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_id>eaca92b725cf433ca46bcd814b96a9db</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_name>x_exls_enterpris_0_crd</sys_name>
+            <sys_overrides/>
+            <sys_package display_value="Enterprise Digital" source="x_exls_enterpris_0">0f5d34e783f743108b9b98c6feaad3ee</sys_package>
+            <sys_policy/>
+            <sys_scope display_value="Enterprise Digital">0f5d34e783f743108b9b98c6feaad3ee</sys_scope>
+            <sys_update_name>sys_ui_form_sections_eaca92b725cf433ca46bcd814b96a9db</sys_update_name>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 01:33:05</sys_updated_on>
+            <sys_user/>
+            <view display_value="Default view" name="NULL">Default view</view>
+            <view_name/>
+        </sys_ui_form>
+    </sys_ui_form_sections>
+</record_update>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="question_choice">
+    <question_choice action="INSERT_OR_UPDATE">
+        <inactive>false</inactive>
+        <order>2</order>
+        <published_ref/>
+        <question display_value="Target Environment">a97944d2419c4fdd973732bca6f2cf44</question>
+        <sys_class_name>question_choice</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-10-14 01:32:47</sys_created_on>
+        <sys_id>df9f77bf06214c5699a9cfc3a9b0cdcb</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Test</sys_name>
+        <sys_package display_value="Enterprise Digital" source="x_exls_enterpris_0">0f5d34e783f743108b9b98c6feaad3ee</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Enterprise Digital">0f5d34e783f743108b9b98c6feaad3ee</sys_scope>
+        <sys_update_name>question_choice_df9f77bf06214c5699a9cfc3a9b0cdcb</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-10-14 01:32:47</sys_updated_on>
+        <text>Test</text>
+        <value>test</value>
+    </question_choice>
+    <fx_price action="delete_multiple" query="id=df9f77bf06214c5699a9cfc3a9b0cdcb"/>
+</record_update>

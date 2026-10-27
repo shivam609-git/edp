@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update>
+    <sys_ui_section caption="Change Request Deployment" section_id="002a4517116e42ddb3e12a3c471e19ff" sys_domain="global" table="x_exls_enterpris_0_crd" version="3" view="">
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>.begin_split</element>
+            <position>0</position>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 02:35:43</sys_created_on>
+            <sys_id>c658f8cbe9cc40ce97d9149cc00c912b</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Change Request Deployment" display_value="Change Request Deployment" name="x_exls_enterpris_0_crd" sys_domain="global" view="Default view">002a4517116e42ddb3e12a3c471e19ff</sys_ui_section>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 02:35:43</sys_updated_on>
+            <sys_user/>
+            <type>.begin_split</type>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>change_request</element>
+            <position>1</position>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 02:35:43</sys_created_on>
+            <sys_id>41a94a14996f4ef289f5d1782a26261d</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Change Request Deployment" display_value="Change Request Deployment" name="x_exls_enterpris_0_crd" sys_domain="global" view="Default view">002a4517116e42ddb3e12a3c471e19ff</sys_ui_section>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 02:35:43</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>environment</element>
+            <position>2</position>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 02:35:43</sys_created_on>
+            <sys_id>a03a768922a14565a1402e75fb660f5d</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Change Request Deployment" display_value="Change Request Deployment" name="x_exls_enterpris_0_crd" sys_domain="global" view="Default view">002a4517116e42ddb3e12a3c471e19ff</sys_ui_section>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 02:35:43</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>deployment_window_start</element>
+            <position>3</position>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 02:35:43</sys_created_on>
+            <sys_id>e831b68069dd4ac79b58ac10dd21a18b</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Change Request Deployment" display_value="Change Request Deployment" name="x_exls_enterpris_0_crd" sys_domain="global" view="Default view">002a4517116e42ddb3e12a3c471e19ff</sys_ui_section>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 02:35:43</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>.split</element>
+            <position>4</position>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 02:35:43</sys_created_on>
+            <sys_id>83fecb15deca411b824fc69c453aae2e</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Change Request Deployment" display_value="Change Request Deployment" name="x_exls_enterpris_0_crd" sys_domain="global" view="Default view">002a4517116e42ddb3e12a3c471e19ff</sys_ui_section>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 02:35:43</sys_updated_on>
+            <sys_user/>
+            <type>.split</type>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>deployment_status</element>
+            <position>5</position>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 02:35:43</sys_created_on>
+            <sys_id>fb6f9032dc0d4deab96ecfc6cf8e683b</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Change Request Deployment" display_value="Change Request Deployment" name="x_exls_enterpris_0_crd" sys_domain="global" view="Default view">002a4517116e42ddb3e12a3c471e19ff</sys_ui_section>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 02:35:43</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>deployed_by</element>
+            <position>6</position>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 02:35:43</sys_created_on>
+            <sys_id>1da3cab552724b5fa4dcee183b61b572</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Change Request Deployment" display_value="Change Request Deployment" name="x_exls_enterpris_0_crd" sys_domain="global" view="Default view">002a4517116e42ddb3e12a3c471e19ff</sys_ui_section>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 02:35:43</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>deployment_window_end</element>
+            <position>7</position>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 02:35:43</sys_created_on>
+            <sys_id>054e0ef7f5e44504aa3851308100bcf5</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Change Request Deployment" display_value="Change Request Deployment" name="x_exls_enterpris_0_crd" sys_domain="global" view="Default view">002a4517116e42ddb3e12a3c471e19ff</sys_ui_section>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 02:35:43</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>.end_split</element>
+            <position>8</position>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 02:35:43</sys_created_on>
+            <sys_id>afd486b4994e401ea272f5c8b5eb2a6e</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Change Request Deployment" display_value="Change Request Deployment" name="x_exls_enterpris_0_crd" sys_domain="global" view="Default view">002a4517116e42ddb3e12a3c471e19ff</sys_ui_section>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 02:35:43</sys_updated_on>
+            <sys_user/>
+            <type>.end_split</type>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>rollback_plan</element>
+            <position>9</position>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 02:35:43</sys_created_on>
+            <sys_id>65ee8f8d4262467a827ef122e25a5e33</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Change Request Deployment" display_value="Change Request Deployment" name="x_exls_enterpris_0_crd" sys_domain="global" view="Default view">002a4517116e42ddb3e12a3c471e19ff</sys_ui_section>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 02:35:43</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>verification_notes</element>
+            <position>10</position>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 02:35:43</sys_created_on>
+            <sys_id>f7dea4b205ca45cdbe40e71fe01482b4</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Change Request Deployment" display_value="Change Request Deployment" name="x_exls_enterpris_0_crd" sys_domain="global" view="Default view">002a4517116e42ddb3e12a3c471e19ff</sys_ui_section>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 02:35:43</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_section action="INSERT_OR_UPDATE">
+            <caption>Change Request Deployment</caption>
+            <header>false</header>
+            <name>x_exls_enterpris_0_crd</name>
+            <roles/>
+            <sys_class_name>sys_ui_section</sys_class_name>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 01:33:05</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_id>002a4517116e42ddb3e12a3c471e19ff</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_name>x_exls_enterpris_0_crd</sys_name>
+            <sys_overrides/>
+            <sys_package display_value="Enterprise Digital" source="x_exls_enterpris_0">0f5d34e783f743108b9b98c6feaad3ee</sys_package>
+            <sys_policy/>
+            <sys_scope display_value="Enterprise Digital">0f5d34e783f743108b9b98c6feaad3ee</sys_scope>
+            <sys_update_name>sys_ui_section_002a4517116e42ddb3e12a3c471e19ff</sys_update_name>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 01:33:05</sys_updated_on>
+            <sys_user/>
+            <title>false</title>
+            <view display_value="Default view" name="NULL">Default view</view>
+            <view_name/>
+        </sys_ui_section>
+    </sys_ui_section>
+</record_update>

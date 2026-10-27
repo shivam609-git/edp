@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update>
+    <sys_documentation element="deployment_window_start" label="Deployment Window Start" language="en" table="x_exls_enterpris_0_crd">
+        <sys_documentation action="INSERT_OR_UPDATE">
+            <element>deployment_window_start</element>
+            <help/>
+            <hint/>
+            <label>Deployment Window Start</label>
+            <language>en</language>
+            <name>x_exls_enterpris_0_crd</name>
+            <plural>Deployment Window Starts</plural>
+            <sys_class_name>sys_documentation</sys_class_name>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 01:32:31</sys_created_on>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_name>Deployment Window Start</sys_name>
+            <sys_package display_value="Enterprise Digital" source="x_exls_enterpris_0">0f5d34e783f743108b9b98c6feaad3ee</sys_package>
+            <sys_policy/>
+            <sys_scope display_value="Enterprise Digital">0f5d34e783f743108b9b98c6feaad3ee</sys_scope>
+            <sys_update_name>sys_documentation_x_exls_enterpris_0_crd_deployment_window_start_en</sys_update_name>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 01:32:31</sys_updated_on>
+            <url/>
+            <url_target/>
+        </sys_documentation>
+    </sys_documentation>
+</record_update>

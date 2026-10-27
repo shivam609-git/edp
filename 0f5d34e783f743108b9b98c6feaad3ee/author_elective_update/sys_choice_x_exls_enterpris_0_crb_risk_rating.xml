@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update>
+    <sys_choice action="INSERT_OR_UPDATE" field="risk_rating" table="x_exls_enterpris_0_crb" version="3">
+        <sys_choice_set action="INSERT_OR_UPDATE">
+            <element>risk_rating</element>
+            <name>x_exls_enterpris_0_crb</name>
+            <sys_class_name>sys_choice_set</sys_class_name>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 01:32:58</sys_created_on>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_name>risk_rating</sys_name>
+            <sys_package display_value="Enterprise Digital" source="x_exls_enterpris_0">0f5d34e783f743108b9b98c6feaad3ee</sys_package>
+            <sys_policy/>
+            <sys_scope display_value="Enterprise Digital">0f5d34e783f743108b9b98c6feaad3ee</sys_scope>
+            <sys_update_name>sys_choice_x_exls_enterpris_0_crb_risk_rating</sys_update_name>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 01:32:58</sys_updated_on>
+        </sys_choice_set>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>risk_rating</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>Low</label>
+            <language>en</language>
+            <name>x_exls_enterpris_0_crb</name>
+            <sequence>1</sequence>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 02:35:40</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 02:35:40</sys_updated_on>
+            <value>low</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>risk_rating</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>Moderate</label>
+            <language>en</language>
+            <name>x_exls_enterpris_0_crb</name>
+            <sequence>2</sequence>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 02:35:40</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 02:35:40</sys_updated_on>
+            <value>moderate</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>risk_rating</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>High</label>
+            <language>en</language>
+            <name>x_exls_enterpris_0_crb</name>
+            <sequence>3</sequence>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 02:35:40</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 02:35:40</sys_updated_on>
+            <value>high</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>risk_rating</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>Critical</label>
+            <language>en</language>
+            <name>x_exls_enterpris_0_crb</name>
+            <sequence>4</sequence>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-10-14 02:35:40</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-10-14 02:35:40</sys_updated_on>
+            <value>critical</value>
+        </sys_choice>
+    </sys_choice>
+</record_update>

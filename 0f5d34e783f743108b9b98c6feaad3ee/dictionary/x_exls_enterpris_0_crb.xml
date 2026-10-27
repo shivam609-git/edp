@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element audit="true" db_object_id="1be382f3be1f4b28844aea900fbeddef" extends="task" label="Change Review Board" name="x_exls_enterpris_0_crb" type="collection">
+        <element choice="3" default="pending" label="Decision" name="decision" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="Pending" sequence="1" value="pending"/>
+                <element inactive_on_update="false" label="Rejected" sequence="3" value="rejected"/>
+                <element inactive_on_update="false" label="Deferred" sequence="4" value="deferred"/>
+                <element inactive_on_update="false" label="Approved" sequence="2" value="approved"/>
+            </choice>
+        </element>
+        <element label="Change Request" name="change_request" reference="change_request" type="reference"/>
+        <element label="Review Date" name="review_date" type="glide_date_time"/>
+        <element label="Board Members" name="board_members" reference="sys_user" reference_qual="active=true" type="glide_list"/>
+        <element label="Risk Rating" name="risk_rating" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="High" sequence="3" value="high"/>
+                <element inactive_on_update="false" label="Critical" sequence="4" value="critical"/>
+                <element inactive_on_update="false" label="Low" sequence="1" value="low"/>
+                <element inactive_on_update="false" label="Moderate" sequence="2" value="moderate"/>
+            </choice>
+        </element>
+        <element label="Review Notes" max_length="4000" name="review_notes" type="multi_two_lines"/>
+    </element>
+</database>

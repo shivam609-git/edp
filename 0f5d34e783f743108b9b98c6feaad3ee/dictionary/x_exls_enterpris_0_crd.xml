@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element audit="true" db_object_id="301f09e74a644f5d9087f66dccf76ab8" extends="task" label="Change Request Deployment" name="x_exls_enterpris_0_crd" type="collection">
+        <element label="Environment" name="environment" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="Development" sequence="1" value="development"/>
+                <element inactive_on_update="false" label="Test" sequence="2" value="test"/>
+                <element inactive_on_update="false" label="Staging" sequence="3" value="staging"/>
+                <element inactive_on_update="false" label="Production" sequence="4" value="production"/>
+            </choice>
+        </element>
+        <element label="Change Request" name="change_request" reference="change_request" type="reference"/>
+        <element choice="3" default="not_started" label="Deployment Status" name="deployment_status" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="Failed" sequence="4" value="failed"/>
+                <element inactive_on_update="false" label="Succeeded" sequence="3" value="succeeded"/>
+                <element inactive_on_update="false" label="In Progress" sequence="2" value="in_progress"/>
+                <element inactive_on_update="false" label="Not Started" sequence="1" value="not_started"/>
+                <element inactive_on_update="false" label="Rolled Back" sequence="5" value="rolled_back"/>
+            </choice>
+        </element>
+        <element label="Deployed By" name="deployed_by" reference="sys_user" reference_qual="active=true" type="reference"/>
+        <element label="Rollback Plan" max_length="4000" name="rollback_plan" type="multi_two_lines"/>
+        <element label="Verification Notes" max_length="4000" name="verification_notes" type="multi_two_lines"/>
+        <element label="Deployment Window Start" name="deployment_window_start" type="glide_date_time"/>
+        <element label="Deployment Window End" name="deployment_window_end" type="glide_date_time"/>
+    </element>
+</database>
